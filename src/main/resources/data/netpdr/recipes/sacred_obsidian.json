@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "#": {
+      "item": "minecraft:obsidian"
+    },
+    "$": {
+      "item": "minecraft:netherite_ingot"
+    },
+    "%": {
+      "item": "minecraft:nether_star"
+    }
+
+  },
+  "pattern": [
+    "#$#",
+    "$%$",
+    "#$#"
+  ],
+  "result": {
+    "item": "netpdrmod:sacred_obsidian"
+  },
+  "show_notification": true
+}

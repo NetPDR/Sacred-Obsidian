@@ -1,0 +1,6 @@
+{
+  "item.netpdrmod.sacred_obsidian": "神圣黑曜石",
+  "item.sacred_obsidian.tooltip": "延伸黑曜石方块至目标造成§625§r点伤害并对目标进行标记§65§r秒，黑曜石方块持续§63§r秒，武器冷却§61§r秒",
+  "itemGroup.netpdr_creative_mode_tab": "NetPDRMod",
+  "effect.netpdrmod.irreconcilable_crack": "Herobrine的标记"
+}
