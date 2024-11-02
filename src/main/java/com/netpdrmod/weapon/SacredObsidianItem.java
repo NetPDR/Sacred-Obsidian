@@ -36,7 +36,7 @@ public class SacredObsidianItem extends BaseItem {
 
     @Override
     protected String getDescriptionKey() {
-        return "item.sacred_obsidian.tooltip"; // Return the corresponding description key for this sword
+        return "item.sacred_obsidian.tooltip"; // Return the corresponding description key for this item
     }
 
     @Override
@@ -119,7 +119,6 @@ public class SacredObsidianItem extends BaseItem {
                 DamageSource damageSource = world.damageSources().playerAttack(player);
                 target.hurt(damageSource, OBSIDIAN_DAMAGE);
                 target.addEffect(new MobEffectInstance(ModEffect.IRRECONCILABLE_CRACK.get(), 100, 0));
-                target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 100, 0));
                 break;  // Stop extending
             }
         }
