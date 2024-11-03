@@ -1,6 +1,7 @@
 package com.netpdrmod.weapon;
 
 import com.netpdrmod.blockentity.SacredObsidianBlockEntity;
+import com.netpdrmod.data.SacredObsidianData;
 import com.netpdrmod.registry.ModEffect;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -11,7 +12,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -27,7 +27,6 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
@@ -36,32 +35,28 @@ public class SacredObsidianItem extends BaseItem {
 
     @Override
     protected String getDescriptionKey() {
-        return "item.sacred_obsidian.tooltip"; // Return the corresponding description key for this item
+        return "item.sacred_obsidian.tooltip"; // 为这个物品返回对应的描述键 // Return the corresponding description key for this item
     }
 
     @Override
     public float getDestroySpeed(@NotNull ItemStack stack, BlockState state) {
-        // If the block can be mined with a pickaxe, use the mining efficiency of the Netherite pickaxe
-        //  mining speed
+        // 如果方块可被镐采集，使用下界合金镐的采掘效率 // If the block can be mined with a pickaxe, use the mining efficiency of the Netherite pickaxe
+        // 采掘速度 // mining speed
         float netheriteEfficiency = 9.0F;
         return state.is(BlockTags.MINEABLE_WITH_PICKAXE) ? netheriteEfficiency : super.getDestroySpeed(stack, state);
     }
 
     @Override
     public boolean isCorrectToolForDrops(BlockState state) {
-        // Check if the block can be mined with a pickaxe; if so, return true
+        // // 检查方块是否可以用镐采集，如果可以则返回 true // Check if the block can be mined with a pickaxe; if so, return true
         return super.isCorrectToolForDrops(state);
     }
 
-    private static final int MAX_DISTANCE = 15;  // Maximum extension distance
-    private static final float OBSIDIAN_DAMAGE = 25.0F;  // Obsidian damage
-    private static final double MAX_DIRECTION_CHANGE = 0.1;  // Random direction change amplitude
-    private static final int COOLDOWN_TIME = 30;  // Cooldown time (30 ticks = 1.5 seconds)
-    private static final int OBSIDIAN_LIFETIME = 60;  // Obsidian's lifetime (60 ticks = 3 seconds)
-
-    // Store the placed obsidian blocks and their remaining time, with unique identifiers
-    private static final Map<BlockPos, Integer> obsidianBlocksToRemove = new HashMap<>();
-    // Used to mark obsidian placed by SacredObsidianItem
+    private static final int MAX_DISTANCE = 15;  // 最大延伸距离 // Maximum extension distance
+    private static final float OBSIDIAN_DAMAGE = 25.0F;  // 黑曜石伤害 // Obsidian damage
+    private static final double MAX_DIRECTION_CHANGE = 0.1;  // 随机方向变化幅度 // Random direction change amplitude
+    private static final int COOLDOWN_TIME = 30;  // 冷却时间 (30 ticks = 1.5秒) // Cooldown time (30 ticks = 1.5 seconds)
+    private static final int OBSIDIAN_LIFETIME = 60;  // 黑曜石的存在时间 (60 ticks = 3秒) // Obsidian's lifetime (60 ticks = 3 seconds)
 
     public SacredObsidianItem(Properties properties) {
         super(properties.stacksTo(1));
@@ -72,17 +67,17 @@ public class SacredObsidianItem extends BaseItem {
         ItemStack itemStack = player.getItemInHand(hand);
 
         if (!world.isClientSide) {
-            // Play anvil sound
+            // 播放铁砧声音 // Play anvil sound
             world.playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.0F, 1.0F);
 
-            // Ray tracing to get hit position
+            // 射线检测以获取命中位置 // Ray tracing to get hit position
             BlockHitResult hitResult = rayTrace(world, player);
             BlockPos hitPos = hitResult.getBlockPos();
 
-            // Extend obsidian and handle target entity
+            // 延伸黑曜石并处理目标实体 // Extend obsidian and handle target entity
             extendObsidianPathAndDamage(world, player, hitPos);
 
-            // Set cooldown time
+            // 设置冷却时间 // Set cooldown time
             player.getCooldowns().addCooldown(this, COOLDOWN_TIME);
         }
 
@@ -90,16 +85,17 @@ public class SacredObsidianItem extends BaseItem {
     }
 
     /**
-     * Extend the obsidian path and deal damage to the target entity
+     * 扩展黑曜石路径并对目标实体造成伤害 Extend the obsidian path and deal damage to the target entity
      *
-     * @param world     Current game world
-     * @param player    Player using the item
-     * @param targetPos Hit position from ray tracing
+     * @param world     当前游戏世界 Current game world
+     * @param player    当前使用物品的玩家 Player using the item
+     * @param targetPos 射线检测命中的位置 Hit position from ray tracing
      */
     private void extendObsidianPathAndDamage(Level world, Player player, BlockPos targetPos) {
         Random random = new Random();
         Vec3 currentPos = player.position();
         Vec3 direction = Vec3.atCenterOf(targetPos).subtract(currentPos).normalize();
+        SacredObsidianData data = SacredObsidianData.get((ServerLevel) world); // 获取数据存储 // Get data store
 
         for (int i = 0; i < MAX_DISTANCE; i++) {
             direction = applyRandomDirectionChange(direction, random);
@@ -107,11 +103,11 @@ public class SacredObsidianItem extends BaseItem {
             BlockPos nextPos = BlockPos.containing(currentPos.x, currentPos.y, currentPos.z);
 
             BlockState blockState = world.getBlockState(nextPos);
-            // Place obsidian and attach BlockEntity
+            // 放置黑曜石并附加 BlockEntity // Place obsidian and attach BlockEntity
             if (world.isEmptyBlock(nextPos) || blockState.canBeReplaced()) {
                 world.setBlock(nextPos, Blocks.OBSIDIAN.defaultBlockState(), 3);
                 world.setBlockEntity(new SacredObsidianBlockEntity(nextPos, Blocks.OBSIDIAN.defaultBlockState()));
-                obsidianBlocksToRemove.put(nextPos, OBSIDIAN_LIFETIME);
+                data.getObsidianData().put(nextPos, OBSIDIAN_LIFETIME); // 直接存储到数据 // Directly store to data
             }
 
             LivingEntity target = findTargetEntityAtPosition(world, nextPos, player);
@@ -119,17 +115,17 @@ public class SacredObsidianItem extends BaseItem {
                 DamageSource damageSource = world.damageSources().playerAttack(player);
                 target.hurt(damageSource, OBSIDIAN_DAMAGE);
                 target.addEffect(new MobEffectInstance(ModEffect.IRRECONCILABLE_CRACK.get(), 100, 0));
-                break;  // Stop extending
+                break;  // 停止延伸 // Stop extending
             }
         }
     }
 
     /**
-     * Randomly change path direction
+     * 随机改变路径方向 Randomly change path direction
      *
-     * @param direction Current direction vector
-     * @param random    Random number generator
-     * @return Changed direction vector
+     * @param direction 当前的方向向量 Current direction vector
+     * @param random    随机数生成器 Random number generator
+     * @return 改变后的方向向量 Changed direction vector
      */
     private Vec3 applyRandomDirectionChange(Vec3 direction, Random random) {
         double randomX = (random.nextDouble() - 0.5) * MAX_DIRECTION_CHANGE;
@@ -139,27 +135,27 @@ public class SacredObsidianItem extends BaseItem {
     }
 
     /**
-     * Find entity at block position, excluding the player
+     * 查找方块位置的实体，排除玩家自己 Find entity at block position, excluding the player
      *
-     * @param world  Current game world
-     * @param pos    Block position
-     * @param player Current player
-     * @return Found entity, or null if none
+     * @param world  当前游戏世界 Current game world
+     * @param pos    方块位置 Block position
+     * @param player 当前玩家 Current player
+     * @return 查找到的实体，若无则返回 null Found entity, or null if none
      */
     @Nullable
     private LivingEntity findTargetEntityAtPosition(Level world, BlockPos pos, Player player) {
         return world.getEntitiesOfClass(LivingEntity.class, new net.minecraft.world.phys.AABB(pos)).stream()
-                .filter(entity -> entity != player)  // Exclude the player
+                .filter(entity -> entity != player)  // 排除玩家自己 // Exclude the player
                 .findFirst()
                 .orElse(null);
     }
 
     /**
-     * Ray trace, returning the hit block or entity
+     * 射线检测，返回命中的方块或实体 Ray trace, returning the hit block or entity
      *
-     * @param world  Current game world
-     * @param player Current player
-     * @return The hit block
+     * @param world  当前游戏世界 Current game world
+     * @param player 当前玩家 Current player
+     * @return 返回命中的方块 The hit block
      */
     private BlockHitResult rayTrace(Level world, Player player) {
         Vec3 eyePosition = player.getEyePosition(1.0F);
@@ -170,56 +166,62 @@ public class SacredObsidianItem extends BaseItem {
     }
 
     /**
-     * In the tick method, remove obsidian and add particle effects.
-     * Only remove obsidian blocks placed by SacredObsidianItem; it won't affect other blocks.
+     * 在 tick 方法中移除黑曜石并添加粒子效果 In the tick method, remove obsidian and add particle effects.
+     * 仅移除由 SacredObsidianItem 放置的黑曜石方块，不会影响其他方块 Only remove obsidian blocks placed by SacredObsidianItem; it won't affect other blocks.
      *
-     * @param world Current game world
+     * @param world 当前游戏世界 Current game world
      */
     public static void tick(Level world) {
-        if (!world.isClientSide) {  // Ensure that blocks are only removed on the server side
-            Iterator<Map.Entry<BlockPos, Integer>> iterator = obsidianBlocksToRemove.entrySet().iterator();
+        if (world instanceof ServerLevel serverLevel) {  // 确保是 ServerLevel // Ensure that is ServerLevel
+            SacredObsidianData data = SacredObsidianData.get(serverLevel);
+            Map<BlockPos, Integer> obsidianBlocks = data.getObsidianData();
+
+            Iterator<Map.Entry<BlockPos, Integer>> iterator = obsidianBlocks.entrySet().iterator();
 
             while (iterator.hasNext()) {
                 Map.Entry<BlockPos, Integer> entry = iterator.next();
                 BlockPos pos = entry.getKey();
                 int ticksLeft = entry.getValue();
 
-                // Ensure the current block is the obsidian placed by SacredObsidianItem, and check its remaining time
+                // 确保当前方块是 SacredObsidianItem 放置的黑曜石，并检查其剩余时间 // Ensure the current block is the obsidian placed by SacredObsidianItem, and check its remaining time
                 BlockState blockState = world.getBlockState(pos);
                 if (ticksLeft <= 0 && blockState.is(Blocks.OBSIDIAN)) {
-                    // Remove the obsidian block and play the digging sound
+                    // 移除黑曜石方块并播放挖掘音效 // Remove the obsidian block and play the digging sound
                     world.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
                     world.playSound(null, pos, SoundEvents.STONE_BREAK, SoundSource.BLOCKS, 1.0F, 1.0F);
 
-                    // Notify the client to generate particle effects
+                    // 通知客户端生成粒子效果 // Notify the client to generate particle effects
                     notifyClientForParticles(world, pos);
 
-                    iterator.remove();  // Remove the processed entry
+                    iterator.remove();  // 移除已处理的条目 // Remove the processed entry
                 } else if (blockState.is(Blocks.OBSIDIAN)) {
-                    // Decrease by 1 each tick
+                    // 每次 tick 只减少 1 // Decrease by 1 each tick
                     entry.setValue(ticksLeft - 1);
                 } else {
-                    // If the block is not obsidian, remove the record directly to prevent incorrect deletion of other blocks
+                    // 如果方块不是黑曜石，直接移除记录，防止误删其他方块 // If the block is not obsidian, remove the record directly to prevent incorrect deletion of other blocks
                     iterator.remove();
                 }
             }
+            // 更新数据回保存 // Update data and save
+            data.setObsidianData(obsidianBlocks);
         }
     }
 
+
     /**
-     * Notify the client to generate particle effects from the server side
+     * 通过服务器端向客户端发送粒子效果生成通知 Notify the client to generate particle effects from the server side
      *
-     * @param world Current game world
-     * @param pos   Position for the particle effects
+     * @param world 当前游戏世界 Current game world
+     * @param pos   粒子效果的位置 Position for the particle effects
      */
     private static void notifyClientForParticles(Level world, BlockPos pos) {
         if (world instanceof ServerLevel serverLevel) {
             serverLevel.sendParticles(
-                    new BlockParticleOption(ParticleTypes.BLOCK, Blocks.OBSIDIAN.defaultBlockState()), // Particle type
-                    pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D, // Particle position
-                    20, // Number of particles
-                    0.5D, 0.5D, 0.5D, // Particle spread range
-                    0.1D // Particle speed
+                    new BlockParticleOption(ParticleTypes.BLOCK, Blocks.OBSIDIAN.defaultBlockState()), // 粒子类型 // Particle type
+                    pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D, // 粒子的位置 // Particle position
+                    20, // 粒子数量 // Number of particles
+                    0.5D, 0.5D, 0.5D, // 粒子扩散范围 // Particle spread range
+                    0.1D // 粒子的速度 // Particle speed
             );
         }
     }

@@ -6,17 +6,18 @@ loaderVersion = "${loader_version_range}"
 license = "${mod_license}"
 
 [[mods]]
+
 modId = "${mod_id}"
 
 version = "${mod_version}"
 
 displayName = "${mod_name}"
 
-authors = "NetPDR"
+authors = "${mod_authors}"
 
-description = '''A mod that makes players to use Herobrine's obsidian from Minecraft Animation AnnoyingVillager'''
+description = '''${mod_description}'''
 
-[[dependencies."${mod_id}"]] #optional
+[[dependencies."${mod_id}"]]
 
 modId = "forge"
 

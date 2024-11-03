@@ -15,7 +15,7 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber
 public class WitherHeartRenderHandler {
 
-    // 定义心形图标的资源路径
+    // 定义心形图标的资源路径 // Define the resource path for the heart icon
     private static final ResourceLocation HEARTS_TEXTURE = new ResourceLocation("minecraft", "textures/gui/icons.png");
 
     @SubscribeEvent
@@ -26,16 +26,16 @@ public class WitherHeartRenderHandler {
 
         LocalPlayer player = Minecraft.getInstance().player;
 
-        // 确保玩家和游戏模式存在
+        // 确保玩家和游戏模式存在 // Ensure the player and game mode exist
         if (player != null && Minecraft.getInstance().gameMode != null) {
             GameType gameMode = Minecraft.getInstance().gameMode.getPlayerMode();
 
-            // 只在生存和冒险模式下渲染彩色心
+            // 只在生存和冒险模式下渲染彩色心 // Only render colorful hearts in Survival and Adventure modes
             if (gameMode == GameType.CREATIVE || gameMode == GameType.SPECTATOR) {
-                return; // 如果是创造模式或旁观者模式，跳过渲染
+                return; // 如果是创造模式或旁观者模式，跳过渲染 // If the player is in Creative or Spectator mode, skip rendering
             }
 
-            // 检查玩家是否受到凋零效果
+            // 检查玩家是否受到凋零效果 // Check if the player is affected by Wither effect
             if (player.hasEffect(ModEffect.IRRECONCILABLE_CRACK.get())) {
                 event.setCanceled(true);
                 renderDynamicRainbowHearts(event.getGuiGraphics(), player);
@@ -57,13 +57,13 @@ public class WitherHeartRenderHandler {
 
         int heartsPerRow = 10;
 
-        // 使用时间生成动态颜色
-        float time = (System.currentTimeMillis() % 10000L) / 10000.0F; // 使用时间生成色调
-        float red = (float) Math.sin(time * 2 * Math.PI) * 0.5F + 0.5F; // 红色分量
-        float green = (float) Math.sin(time * 2 * Math.PI + (2 * Math.PI / 3)) * 0.5F + 0.5F; // 绿色分量
-        float blue = (float) Math.sin(time * 2 * Math.PI + (4 * Math.PI / 3)) * 0.5F + 0.5F; // 蓝色分量
+        // 使用时间生成动态颜色 // Generate dynamic color using time
+        float time = (System.currentTimeMillis() % 10000L) / 10000.0F; // 使用时间生成色调 // Generate color using time
+        float red = (float) Math.sin(time * 2 * Math.PI) * 0.5F + 0.5F; // 红色分量 // Red component
+        float green = (float) Math.sin(time * 2 * Math.PI + (2 * Math.PI / 3)) * 0.5F + 0.5F; // 绿色分量 // Green component
+        float blue = (float) Math.sin(time * 2 * Math.PI + (4 * Math.PI / 3)) * 0.5F + 0.5F; // 蓝色分量 // Blue component
 
-        // 渲染普通心形
+        // 渲染普通心形 // Render regular hearts
         for (int i = 0; i < (maxHealth + 1) / 2; i++) {
             int x = baseX + (i % heartsPerRow) * 8;
             int y = baseY - (i / heartsPerRow) * 10;
@@ -71,79 +71,29 @@ public class WitherHeartRenderHandler {
             RenderSystem.setShaderColor(red, green, blue, 1.0F); // 设置动态颜色
 
             if (i * 2 + 1 < health) {
-                guiGraphics.blit(HEARTS_TEXTURE, x, y, 16, 0, 9, 9); // 完整心形
+                guiGraphics.blit(HEARTS_TEXTURE, x, y, 16, 0, 9, 9); // 完整心形 // Full heart
             } else if (i * 2 + 1 == health) {
-                guiGraphics.blit(HEARTS_TEXTURE, x, y, 25, 0, 9, 9); // 半颗心形
+                guiGraphics.blit(HEARTS_TEXTURE, x, y, 25, 0, 9, 9); // 半颗心形 // Half heart
             } else {
-                guiGraphics.blit(HEARTS_TEXTURE, x, y, 34, 0, 9, 9); // 空心形
+                guiGraphics.blit(HEARTS_TEXTURE, x, y, 34, 0, 9, 9); // 空心形 // Empty heart
             }
         }
 
-        // 吸收心
+        // 吸收心 // Absorption hearts
         for (int i = 0; i < (absorption + 1) / 2; i++) {
-            int x = baseX + ((i + (maxHealth + 1) / 2) % heartsPerRow) * 8; // 修正了缺少的括号
+            int x = baseX + ((i + (maxHealth + 1) / 2) % heartsPerRow) * 8;
             int y = baseY - ((i + (maxHealth + 1) / 2) / heartsPerRow) * 10;
 
-            RenderSystem.setShaderColor(red, green, blue, 1.0F); // 使用相同的动态颜色
+            RenderSystem.setShaderColor(red, green, blue, 1.0F); // 使用相同的动态颜色 // Use the same dynamic color
 
             if (i * 2 + 1 < absorption) {
-                guiGraphics.blit(HEARTS_TEXTURE, x, y, 160, 0, 9, 9); // 完整吸收心
+                guiGraphics.blit(HEARTS_TEXTURE, x, y, 160, 0, 9, 9); // 完整吸收心 // Render full absorption heart
             } else {
-                guiGraphics.blit(HEARTS_TEXTURE, x, y, 169, 0, 9, 9); // 半颗吸收心
+                guiGraphics.blit(HEARTS_TEXTURE, x, y, 169, 0, 9, 9); // 半颗吸收心 // Half absorption heart
             }
         }
 
-        // 重置颜色
+        // 重置颜色 // Reset color
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
     }
 }
-
-//private static void renderWitherHearts(GuiGraphics guiGraphics, LocalPlayer player) {
-        //int health = (int) player.getHealth();
-        //int maxHealth = (int) player.getMaxHealth();
-        //int absorption = (int) player.getAbsorptionAmount(); // 获取玩家的吸收生命值
-
-        // 设置渲染颜色为黑色（用于凋零效果）
-        //RenderSystem.setShaderColor(0.0F, 0.0F, 0.0F, 1.0F);
-        //RenderSystem.setShaderTexture(0, HEARTS_TEXTURE);
-
-        //int screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-        //int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
-        //int baseX = screenWidth / 2 - 91;
-        //int baseY = screenHeight - 39;
-
-        //int heartsPerRow = 10;
-
-        // 渲染凋零效果的黑色心
-        //for (int i = 0; i < (maxHealth + 1) / 2; i++) {
-            //int x = baseX + (i % heartsPerRow) * 8;
-            //int y = baseY - (i / heartsPerRow) * 10;
-
-            //if (i * 2 + 1 < health) {
-                //guiGraphics.blit(HEARTS_TEXTURE, x, y, 16, 0, 9, 9); // 完整的心形
-            //} else if (i * 2 + 1 == health) {
-                //guiGraphics.blit(HEARTS_TEXTURE, x, y, 25, 0, 9, 9); // 半颗心形
-            //} else {
-                //guiGraphics.blit(HEARTS_TEXTURE, x, y, 34, 0, 9, 9); // 空心形
-            //}
-        //}
-
-        // 重置颜色后，设置吸收心的渲染颜色为黄色
-        //RenderSystem.setShaderColor(1.0F, 1.0F, 0.0F, 1.0F);
-
-        // 吸收心的渲染逻辑
-        //for (int i = 0; i < (absorption + 1) / 2; i++) {
-            //int x = baseX + ((i + (maxHealth + 1) / 2) % heartsPerRow) * 8;
-            //int y = baseY - ((i + (maxHealth + 1) / 2) / heartsPerRow) * 10;
-
-            //if (i * 2 + 1 < absorption) {
-                //guiGraphics.blit(HEARTS_TEXTURE, x, y, 160, 0, 9, 9); // 完整的吸收心形
-            //} else {
-                //guiGraphics.blit(HEARTS_TEXTURE, x, y, 169, 0, 9, 9); // 半颗吸收心形
-            //}
-        //}
-
-        // 重置颜色
-        //RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-    //}
-//}

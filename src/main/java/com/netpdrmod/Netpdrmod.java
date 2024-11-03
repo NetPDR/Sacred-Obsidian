@@ -50,7 +50,6 @@ public class Netpdrmod {
     public Netpdrmod() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
-
         modEventBus.addListener(this::commonSetup);
 
         CREATIVE_MODE_TABS.register(modEventBus);
