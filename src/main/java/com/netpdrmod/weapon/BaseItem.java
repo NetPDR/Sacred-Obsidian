@@ -26,8 +26,7 @@ public abstract  class BaseItem extends Item{
 
     @Override
     public float getDestroySpeed(@NotNull ItemStack stack, BlockState state) {
-        // If the block can be mined with a pickaxe, use the mining efficiency of the Netherite pickaxe
-        //  mining speed
+        // 采掘速度 // mining speed
         float netheriteEfficiency = 25.0F;
         return state.is(BlockTags.MINEABLE_WITH_PICKAXE) ? netheriteEfficiency : super.getDestroySpeed(stack, state);
     }

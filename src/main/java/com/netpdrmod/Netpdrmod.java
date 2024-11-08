@@ -3,6 +3,7 @@ package com.netpdrmod;
 import com.mojang.logging.LogUtils;
 import com.netpdrmod.registry.ModBlockEntities;
 import com.netpdrmod.registry.ModEffect;
+import com.netpdrmod.registry.ModEntity;
 import com.netpdrmod.registry.ModItems;
 import com.netpdrmod.weapon.SacredObsidianItem;
 import net.minecraft.client.Minecraft;
@@ -63,6 +64,8 @@ public class Netpdrmod {
         ModEffect.EFFECTS.register(modEventBus);
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        // 注册实体类型
+        ModEntity.ENTITY_TYPES.register(modEventBus);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {

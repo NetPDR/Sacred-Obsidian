@@ -10,10 +10,12 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public class SacredObsidianData extends SavedData {
     private static final String DATA_NAME = "sacred_obsidian_data";
     private Map<BlockPos, Integer> obsidianData = new HashMap<>();
+    private UUID playerUuid;  // 存储玩家的 UUID // Stores the player's UUID
 
     // 存储当前所有的黑曜石数据到 NBT // Save the current obsidian data to NBT
     @Override
@@ -26,6 +28,12 @@ public class SacredObsidianData extends SavedData {
             listTag.add(entryTag);
         }
         compound.put("obsidianData", listTag);
+
+        // 保存玩家的 UUID // Save the player's UUID
+        if (playerUuid != null) {
+            compound.putUUID("playerUuid", playerUuid);
+        }
+
         return compound;
     }
 
@@ -39,6 +47,12 @@ public class SacredObsidianData extends SavedData {
             int ticksLeft = entryTag.getInt("ticksLeft");
             data.obsidianData.put(pos, ticksLeft);
         }
+
+        // 读取玩家的 UUID // Read the player's UUID
+        if (compound.contains("playerUuid", Tag.TAG_INT_ARRAY)) {
+            data.playerUuid = compound.getUUID("playerUuid");
+        }
+
         return data;
     }
 
@@ -54,5 +68,16 @@ public class SacredObsidianData extends SavedData {
 
     public Map<BlockPos, Integer> getObsidianData() {
         return obsidianData;
+    }
+
+    // 获取玩家 UUID // Get the player's UUID
+    public UUID getPlayerUuid() {
+        return playerUuid;
+    }
+
+    // 设置玩家 UUID // Set the player's UUID
+    public void setPlayerUuid(UUID playerUuid) {
+        this.playerUuid = playerUuid;
+        setDirty();  // 标记数据已修改 // Mark data as modified
     }
 }

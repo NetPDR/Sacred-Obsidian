@@ -2,6 +2,7 @@ package com.netpdrmod.weapon;
 
 import com.netpdrmod.blockentity.SacredObsidianBlockEntity;
 import com.netpdrmod.data.SacredObsidianData;
+import com.netpdrmod.entity.SacredObsidianEntity;
 import com.netpdrmod.registry.ModEffect;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -12,6 +13,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -30,6 +32,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 
 public class SacredObsidianItem extends BaseItem {
 
@@ -40,9 +43,8 @@ public class SacredObsidianItem extends BaseItem {
 
     @Override
     public float getDestroySpeed(@NotNull ItemStack stack, BlockState state) {
-        // 如果方块可被镐采集，使用下界合金镐的采掘效率 // If the block can be mined with a pickaxe, use the mining efficiency of the Netherite pickaxe
         // 采掘速度 // mining speed
-        float netheriteEfficiency = 9.0F;
+        float netheriteEfficiency = 25.0F;
         return state.is(BlockTags.MINEABLE_WITH_PICKAXE) ? netheriteEfficiency : super.getDestroySpeed(stack, state);
     }
 
@@ -96,6 +98,7 @@ public class SacredObsidianItem extends BaseItem {
         Vec3 currentPos = player.position();
         Vec3 direction = Vec3.atCenterOf(targetPos).subtract(currentPos).normalize();
         SacredObsidianData data = SacredObsidianData.get((ServerLevel) world); // 获取数据存储 // Get data store
+        data.setPlayerUuid(player.getUUID());  // 设置玩家的 UUID
 
         for (int i = 0; i < MAX_DISTANCE; i++) {
             direction = applyRandomDirectionChange(direction, random);
@@ -115,6 +118,7 @@ public class SacredObsidianItem extends BaseItem {
                 DamageSource damageSource = world.damageSources().playerAttack(player);
                 target.hurt(damageSource, OBSIDIAN_DAMAGE);
                 target.addEffect(new MobEffectInstance(ModEffect.IRRECONCILABLE_CRACK.get(), 100, 0));
+                target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 100, 0));
                 break;  // 停止延伸 // Stop extending
             }
         }
@@ -166,7 +170,7 @@ public class SacredObsidianItem extends BaseItem {
     }
 
     /**
-     * 在 tick 方法中移除黑曜石并添加粒子效果 In the tick method, remove obsidian and add particle effects.
+     * 在 tick 方法中移除黑曜石并生成黑曜石实体以及添加粒子效果 In the tick method, remove obsidian whilst spawning obsidian entity and adding particle effects.
      * 仅移除由 SacredObsidianItem 放置的黑曜石方块，不会影响其他方块 Only remove obsidian blocks placed by SacredObsidianItem; it won't affect other blocks.
      *
      * @param world 当前游戏世界 Current game world
@@ -190,6 +194,17 @@ public class SacredObsidianItem extends BaseItem {
                     world.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
                     world.playSound(null, pos, SoundEvents.STONE_BREAK, SoundSource.BLOCKS, 1.0F, 1.0F);
 
+                    // 获取玩家 UUID // Get the player's UUID
+                    UUID playerUuid = data.getPlayerUuid();
+                    Player player = serverLevel.getPlayerByUUID(playerUuid);
+
+                    // 如果玩家存在，则生成黑曜石实体并设置其拥有者 // If the player exists, generate the Sacred Obsidian entity and set its owner
+                    if (player != null) {
+                        SacredObsidianEntity obsidianEntity = new SacredObsidianEntity(serverLevel, pos.getX(), pos.getY(), pos.getZ());
+                        obsidianEntity.setOwner(player);  // 设置玩家为拥有者 // Set the player as the owner
+                        serverLevel.addFreshEntity(obsidianEntity);  // 将黑曜石实体添加到世界中 // Add the obsidian entity to the world
+                    }
+
                     // 通知客户端生成粒子效果 // Notify the client to generate particle effects
                     notifyClientForParticles(world, pos);
 
@@ -206,7 +221,6 @@ public class SacredObsidianItem extends BaseItem {
             data.setObsidianData(obsidianBlocks);
         }
     }
-
 
     /**
      * 通过服务器端向客户端发送粒子效果生成通知 Notify the client to generate particle effects from the server side
