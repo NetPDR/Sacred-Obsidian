@@ -60,6 +60,12 @@ public class SacredObsidianEntity extends Entity {
         // 如果存在owner，并且不在客户端，执行吸引逻辑 // If there is an owner, and it's not on the client side, perform the attraction logic
         if (owner != null && !this.getCommandSenderWorld().isClientSide) {
             double distance = this.owner.distanceTo(this);  // 计算与玩家的距离 // Calculate the distance to the player
+            double maxDistance = 128.0; // 设置距离限制 // Set a maximum distance limit
+
+            if (distance > maxDistance) {
+                this.discard(); // 如果距离超过限制，移除实体 // If distance exceeds the limit, remove the entity
+                return;
+            }
 
             // 如果黑曜石实体距离玩家足够近，则移除并播放拾取声音 // If the obsidian entity is close enough to the player, remove it and play the pickup sound
             double minDistance = 1.0;

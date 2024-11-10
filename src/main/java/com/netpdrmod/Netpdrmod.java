@@ -9,8 +9,10 @@ import com.netpdrmod.weapon.SacredObsidianItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
@@ -28,6 +30,8 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.slf4j.Logger;
+
+import static com.netpdrmod.weapon.SacredObsidianItem.tickAllDimensions;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(Netpdrmod.MODID)
@@ -85,6 +89,10 @@ public class Netpdrmod {
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
             SacredObsidianItem.tick(event.getServer().overworld());
+            ServerLevel overworld = event.getServer().getLevel(Level.OVERWORLD);
+            if (overworld != null) {
+                tickAllDimensions(overworld);  // 调用 tickAllDimensions 方法遍历所有维度 // Call the tickAllDimensions method to iterate through all dimensions
+            }
         }
     }
 

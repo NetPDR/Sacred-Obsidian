@@ -170,12 +170,25 @@ public class SacredObsidianItem extends BaseItem {
     }
 
     /**
+     * 遍历所有维度并调用每个维度的 tick 逻辑
+     * Iterate over all dimensions and call tick logic for each dimension.
+     *
+     * @param mainWorld 主世界 // Main world
+     */
+    public static void tickAllDimensions(ServerLevel mainWorld) {
+        for (ServerLevel world : mainWorld.getServer().getAllLevels()) {
+            tick(world);  // 调用现有的 tick 方法处理每个维度中的黑曜石逻辑 // Call the existing tick method to handle the obsidian logic in each dimension
+        }
+    }
+
+    /**
      * 在 tick 方法中移除黑曜石并生成黑曜石实体以及添加粒子效果 In the tick method, remove obsidian whilst spawning obsidian entity and adding particle effects.
      * 仅移除由 SacredObsidianItem 放置的黑曜石方块，不会影响其他方块 Only remove obsidian blocks placed by SacredObsidianItem; it won't affect other blocks.
      *
      * @param world 当前游戏世界 Current game world
      */
     public static void tick(Level world) {
+
         if (world instanceof ServerLevel serverLevel) {  // 确保是 ServerLevel // Ensure that is ServerLevel
             SacredObsidianData data = SacredObsidianData.get(serverLevel);
             Map<BlockPos, Integer> obsidianBlocks = data.getObsidianData();
