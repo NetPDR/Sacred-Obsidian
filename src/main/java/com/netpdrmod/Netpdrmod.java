@@ -5,7 +5,6 @@ import com.netpdrmod.registry.ModBlockEntities;
 import com.netpdrmod.registry.ModEffect;
 import com.netpdrmod.registry.ModEntity;
 import com.netpdrmod.registry.ModItems;
-import com.netpdrmod.weapon.SacredObsidianItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -85,10 +84,10 @@ public class Netpdrmod {
     }
 
     //Herobrine's Obsidian Weapon
+    //SacredObsidianItem.tick(event.getServer().overworld());
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
-            SacredObsidianItem.tick(event.getServer().overworld());
             ServerLevel overworld = event.getServer().getLevel(Level.OVERWORLD);
             if (overworld != null) {
                 tickAllDimensions(overworld);  // 调用 tickAllDimensions 方法遍历所有维度 // Call the tickAllDimensions method to iterate through all dimensions
@@ -102,7 +101,6 @@ public class Netpdrmod {
         // Do something when the server starts
         LOGGER.info("HELLO from server starting");
     }
-
 
     @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static class ClientModEvents {
