@@ -9,6 +9,7 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
+
 public class ModEffect
 {
     public static final DeferredRegister<MobEffect> EFFECTS = DeferredRegister.create(ForgeRegistries.MOB_EFFECTS,"netpdrmod");
@@ -17,7 +18,7 @@ public class ModEffect
         // 这个效果生效时，就将玩家的速度降低25% // When this effect is applied, it reduces the player's speed by 25%
         return new EffectIrreconcilableCrack(MobEffectCategory.HARMFUL, 0x000033, false)
                 .addAttributeModifier(Attributes.MOVEMENT_SPEED,
-                        "7107DE5E-7CE8-4030-940E-514C1F160890", -0.25F, AttributeModifier.Operation.MULTIPLY_TOTAL);
+                        "7107DE5E-7CE8-4030-940E-514C1F160890", -0.25F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
     });
 
 }

@@ -15,39 +15,48 @@ public class EffectIrreconcilableCrack extends BaseEffect {
         super(type, color, isInstant);
     }
 
-    // Buff隔多久生效一次 // How often the buff is applied
-    @Override
-    protected boolean canApplyEffect(int remainingTicks, int level) {
-        return remainingTicks % 5 == 0;
-    }
 
-    // Buff在生物身上的效果 // Effect of the buff on the entity
     @Override
-    public void applyEffectTick(@NotNull LivingEntity living, int amplified) {
-        amplified++;
+    protected void onEffectActive(@NotNull LivingEntity living, int amplified) {
+        amplified++; // Buff等级从0开始，因此+1表示实际强度 // // Buff level starts from 0, so +1 represents the actual strength
         Random ran = new Random();
-        ran.nextInt(5);
 
-        // 如果是玩家，加快其饥饿速度 // If the entity is a player, increase hunger exhaustion rate
+        // 如果是玩家，加快其饥饿速度 // // If it's a player, increase their hunger rate
         if (living instanceof Player) {
             ((Player) living).causeFoodExhaustion(2F * amplified);
         }
 
-        // 每次受到1.0乘Buff等级的伤害 // Deals damage equal to 1.0 times the buff level
+        // 每次受到 1.0 乘以 Buff 等级的伤害 // Take 1.0 damage multiplied by the Buff level each time
         living.hurt(living.damageSources().wither(), 1.0F * amplified);
 
-        // 粒子效果 // Particle effect
+        // 粒子效果
         if (living.getCommandSenderWorld() instanceof ServerLevel world) {
             double x = living.getX();
             double y = living.getY();
             double z = living.getZ();
-            int particleCount = 10 * amplified; // 粒子数量根据Buff等级调整 // Adjusts particle count based on buff level
-            world.sendParticles(ParticleTypes.SCULK_SOUL, x, y + living.getBbHeight() * 0.5F, z, particleCount, living.getBbWidth() * 0.5, living.getBbHeight() * 0.5, living.getBbWidth() * 0.5, 0);
+            int particleCount = 10 * amplified; // 根据Buff等级调整粒子数量 // Particle effect
+            world.sendParticles(
+                    ParticleTypes.SCULK_SOUL,
+                    x,
+                    y + living.getBbHeight() * 0.5F,
+                    z,
+                    particleCount,
+                    living.getBbWidth() * 0.5,
+                    living.getBbHeight() * 0.5,
+                    living.getBbWidth() * 0.5,
+                    0
+            );
         }
     }
 
     @Override
+    public boolean shouldApplyEffectTickThisTick(int remainingTicks, int level) {
+        // 每5个 tick 应用一次效果 // Apply the effect every 5 ticks
+        return remainingTicks % 5 == 0;
+    }
+
+    @Override
     public boolean isBeneficial() {
-        return false;
+        return false; // 确定该效果是有害的 // This effect is harmful
     }
 }

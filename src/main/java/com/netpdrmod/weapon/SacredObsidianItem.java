@@ -5,13 +5,15 @@ import com.netpdrmod.data.SacredObsidianData;
 import com.netpdrmod.entity.SacredObsidianEntity;
 import com.netpdrmod.registry.ModEffect;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
@@ -26,6 +28,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
+import net.minecraftforge.common.ToolAction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,15 +46,12 @@ public class SacredObsidianItem extends BaseItem {
 
     @Override
     public float getDestroySpeed(@NotNull ItemStack stack, BlockState state) {
-        // 采掘速度 // mining speed
-        float netheriteEfficiency = 25.0F;
-        return state.is(BlockTags.MINEABLE_WITH_PICKAXE) ? netheriteEfficiency : super.getDestroySpeed(stack, state);
+        return super.getDestroySpeed(stack, state);
     }
 
     @Override
-    public boolean isCorrectToolForDrops(BlockState state) {
-        // // 检查方块是否可以用镐采集，如果可以则返回 true // Check if the block can be mined with a pickaxe; if so, return true
-        return super.isCorrectToolForDrops(state);
+    public boolean canPerformAction(ItemStack stack, ToolAction toolAction) {
+        return super.canPerformAction(stack, toolAction);
     }
 
     private static final int MAX_DISTANCE = 15;  // 最大延伸距离 // Maximum extension distance
@@ -117,7 +117,9 @@ public class SacredObsidianItem extends BaseItem {
             if (target != null) {
                 DamageSource damageSource = world.damageSources().playerAttack(player);
                 target.hurt(damageSource, OBSIDIAN_DAMAGE);
-                target.addEffect(new MobEffectInstance(ModEffect.IRRECONCILABLE_CRACK.get(), 100, 0));
+                target.hurt(damageSource, OBSIDIAN_DAMAGE);
+                Holder<MobEffect> effectHolder = BuiltInRegistries.MOB_EFFECT.wrapAsHolder(ModEffect.IRRECONCILABLE_CRACK.get());
+                target.addEffect(new MobEffectInstance(effectHolder, 100, 0));
                 target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 100, 0));
                 break;  // 停止延伸 // Stop extending
             }

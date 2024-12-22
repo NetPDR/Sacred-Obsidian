@@ -60,7 +60,7 @@ public class SacredObsidianRenderer extends EntityRenderer<SacredObsidianEntity>
         itemRenderer.render(itemStack, ItemDisplayContext.GROUND, false, poseStack, bufferSource, packedLight, OverlayTexture.NO_OVERLAY, bakedModel);
 
         // 恢复 PoseStack 的状态 // Restore the PoseStack state
-        poseStack.popPose();  // 恢复变换
+        poseStack.popPose();  // 恢复变换 // Restore the transformation
 
         // 渲染实体的默认操作 // Default rendering operation for the entity
         super.render(entity, entityYaw, partialTicks, poseStack, bufferSource, packedLight);

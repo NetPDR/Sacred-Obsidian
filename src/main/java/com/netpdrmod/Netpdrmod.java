@@ -19,7 +19,6 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
@@ -36,7 +35,6 @@ import static com.netpdrmod.weapon.SacredObsidianItem.tickAllDimensions;
 @Mod(Netpdrmod.MODID)
 public class Netpdrmod {
 
-
     public static final String MODID = "netpdrmod";
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -51,8 +49,9 @@ public class Netpdrmod {
             .title(Component.translatable("itemGroup.netpdr_creative_mode_tab"))
             .build());
 
-    public Netpdrmod() {
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+    public Netpdrmod(FMLJavaModLoadingContext context) {
+
+        IEventBus modEventBus = context.getModEventBus();
 
         modEventBus.addListener(this::commonSetup);
 
@@ -66,9 +65,9 @@ public class Netpdrmod {
 
         ModEffect.EFFECTS.register(modEventBus);
 
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
-        // 注册实体类型
         ModEntity.ENTITY_TYPES.register(modEventBus);
+
+        context.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -84,7 +83,6 @@ public class Netpdrmod {
     }
 
     //Herobrine's Obsidian Weapon
-    //SacredObsidianItem.tick(event.getServer().overworld());
     @SubscribeEvent
     public void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
@@ -95,10 +93,9 @@ public class Netpdrmod {
         }
     }
 
-    // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
-        // Do something when the server starts
+
         LOGGER.info("HELLO from server starting");
     }
 

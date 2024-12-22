@@ -1,6 +1,7 @@
 package com.netpdrmod.entity;
 
 import com.netpdrmod.registry.ModEntity;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
@@ -36,8 +37,8 @@ public class SacredObsidianEntity extends Entity {
     }
 
     @Override
-    protected void defineSynchedData() {
-        // 此处可以定义需要同步的数据字段 // Define fields that need to be synchronized here
+    protected void defineSynchedData(SynchedEntityData.@NotNull Builder builder) {
+
     }
 
     @Override
