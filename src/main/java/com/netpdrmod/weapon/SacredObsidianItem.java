@@ -4,6 +4,7 @@ import com.netpdrmod.blockentity.SacredObsidianBlockEntity;
 import com.netpdrmod.data.SacredObsidianData;
 import com.netpdrmod.entity.SacredObsidianEntity;
 import com.netpdrmod.registry.ModEffect;
+import com.netpdrmod.registry.ModEnchantments;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -17,6 +18,8 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -54,7 +57,9 @@ public class SacredObsidianItem extends BaseItem {
         return super.isCorrectToolForDrops(state);
     }
 
-    private static final int MAX_DISTANCE = 15;  // 最大延伸距离 // Maximum extension distance
+    //private static final int MAX_DISTANCE = 15;  // 最大延伸距离 // Maximum extension distance
+    private static final int BASE_MAX_DISTANCE = 15;
+    private static final int EXTRA_PER_LEVEL   = 5;  // 每级多延伸 5 格 //Each level extends by 5 more tiles
     private static final float OBSIDIAN_DAMAGE = 25.0F;  // 黑曜石伤害 // Obsidian damage
     private static final double MAX_DIRECTION_CHANGE = 0.1;  // 随机方向变化幅度 // Random direction change amplitude
     private static final int COOLDOWN_TIME = 30;  // 冷却时间 (30 ticks = 1.5秒) // Cooldown time (30 ticks = 1.5 seconds)
@@ -69,15 +74,20 @@ public class SacredObsidianItem extends BaseItem {
         ItemStack itemStack = player.getItemInHand(hand);
 
         if (!world.isClientSide) {
+            // 读取附魔等级，算出最大延伸距离 Read the enchantment level and calculate the maximum extension distance
+            Map<Enchantment,Integer> enchMap = EnchantmentHelper.getEnchantments(itemStack);
+            int reachLevel = enchMap.getOrDefault(ModEnchantments.OBSIDIAN_REACH.get(), 0);
+            int maxDistance = BASE_MAX_DISTANCE + reachLevel * EXTRA_PER_LEVEL;
+
             // 播放铁砧声音 // Play anvil sound
             world.playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.0F, 1.0F);
 
             // 射线检测以获取命中位置 // Ray tracing to get hit position
-            BlockHitResult hitResult = rayTrace(world, player);
+            BlockHitResult hitResult = rayTrace(world, player, maxDistance);
             BlockPos hitPos = hitResult.getBlockPos();
 
             // 延伸黑曜石并处理目标实体 // Extend obsidian and handle target entity
-            extendObsidianPathAndDamage(world, player, hitPos);
+            extendObsidianPathAndDamage(world, player, hitPos, itemStack, maxDistance);
 
             // 设置冷却时间 // Set cooldown time
             player.getCooldowns().addCooldown(this, COOLDOWN_TIME);
@@ -92,15 +102,24 @@ public class SacredObsidianItem extends BaseItem {
      * @param world     当前游戏世界 Current game world
      * @param player    当前使用物品的玩家 Player using the item
      * @param targetPos 射线检测命中的位置 Hit position from ray tracing
+     * @param maxDistance 本次可以延伸的最大距离 The maximum distance that can be extended this time
      */
-    private void extendObsidianPathAndDamage(Level world, Player player, BlockPos targetPos) {
+    private void extendObsidianPathAndDamage(Level world, Player player, BlockPos targetPos, ItemStack stack, int maxDistance) {
+
+        // 先读取 Obsidian Power 等级 // Read the Obsidian Power grade first
+        Map<Enchantment,Integer> enchMap = EnchantmentHelper.getEnchantments(stack);
+        int powerLevel = enchMap.getOrDefault(ModEnchantments.OBSIDIAN_POWER.get(), 0);
+
+        // 计算每次造成的伤害：基础 + 每级5点 // Calculate the damage dealt each time: base + 5 points per level
+        float damagePerHit = OBSIDIAN_DAMAGE + powerLevel * 5.0F;
+
         Random random = new Random();
         Vec3 currentPos = player.position();
         Vec3 direction = Vec3.atCenterOf(targetPos).subtract(currentPos).normalize();
         SacredObsidianData data = SacredObsidianData.get((ServerLevel) world); // 获取数据存储 // Get data store
         data.setPlayerUuid(player.getUUID());  // 设置玩家的 UUID
 
-        for (int i = 0; i < MAX_DISTANCE; i++) {
+        for (int i = 0; i < maxDistance; i++) {
             direction = applyRandomDirectionChange(direction, random);
             currentPos = currentPos.add(direction);
             BlockPos nextPos = BlockPos.containing(currentPos.x, currentPos.y, currentPos.z);
@@ -116,7 +135,7 @@ public class SacredObsidianItem extends BaseItem {
             LivingEntity target = findTargetEntityAtPosition(world, nextPos, player);
             if (target != null) {
                 DamageSource damageSource = world.damageSources().playerAttack(player);
-                target.hurt(damageSource, OBSIDIAN_DAMAGE);
+                target.hurt(damageSource, damagePerHit);
                 target.addEffect(new MobEffectInstance(ModEffect.IRRECONCILABLE_CRACK.get(), 100, 0));
                 target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 100, 0));
                 break;  // 停止延伸 // Stop extending
@@ -161,9 +180,9 @@ public class SacredObsidianItem extends BaseItem {
      * @param player 当前玩家 Current player
      * @return 返回命中的方块 The hit block
      */
-    private BlockHitResult rayTrace(Level world, Player player) {
+    private BlockHitResult rayTrace(Level world, Player player, int maxDistance) {
         Vec3 eyePosition = player.getEyePosition(1.0F);
-        Vec3 lookVector = player.getLookAngle().scale(MAX_DISTANCE);
+        Vec3 lookVector = player.getLookAngle().scale(maxDistance);
         Vec3 traceEnd = eyePosition.add(lookVector);
         ClipContext context = new ClipContext(eyePosition, traceEnd, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player);
         return world.clip(context);

@@ -1,10 +1,7 @@
 package com.netpdrmod;
 
 import com.mojang.logging.LogUtils;
-import com.netpdrmod.registry.ModBlockEntities;
-import com.netpdrmod.registry.ModEffect;
-import com.netpdrmod.registry.ModEntity;
-import com.netpdrmod.registry.ModItems;
+import com.netpdrmod.registry.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -69,6 +66,8 @@ public class Netpdrmod {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
         // 注册实体类型
         ModEntity.ENTITY_TYPES.register(modEventBus);
+
+        ModEnchantments.register(modEventBus);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {

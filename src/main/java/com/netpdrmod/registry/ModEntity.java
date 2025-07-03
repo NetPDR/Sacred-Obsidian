@@ -15,6 +15,8 @@ public class ModEntity {
     public static final RegistryObject<EntityType<SacredObsidianEntity>> SACRED_OBSIDIAN_ITEM_ENTITY = ENTITY_TYPES.register("sacred_obsidian_item_entity",
             () -> EntityType.Builder.<SacredObsidianEntity>of(SacredObsidianEntity::new, MobCategory.MISC)
                     .sized(0.25f, 0.25f) // 设置与普通掉落物相同的碰撞盒大小 // Set the collision box size to be the same as a regular item drop
+                    .clientTrackingRange(8)    // 客户端跟踪距离：8 区块以内开始同步
+                    .updateInterval(1)
                     .build(Netpdrmod.MODID + "sacred_obsidian_item_entity")
     );
 }

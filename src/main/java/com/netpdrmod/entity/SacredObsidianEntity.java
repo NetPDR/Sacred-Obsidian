@@ -3,6 +3,7 @@ package com.netpdrmod.entity;
 import com.netpdrmod.registry.ModEntity;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.sounds.SoundEvents;
@@ -44,6 +45,13 @@ public class SacredObsidianEntity extends Entity {
     public void tick() {
         super.tick();
 
+        // Client-only: 视觉旋转
+        if (this.level().isClientSide) {
+            this.setXRot(this.getXRot() + 0.5F);
+            this.setYRot(this.getYRot() + 2.5F);
+            return;
+        }
+
         // 检查是否存在owner // Check if the owner exists
         if (owner == null && ownerUUID != null) {
             // 如果没有owner，尝试恢复 // If there is no owner, try to recover it
@@ -54,8 +62,8 @@ public class SacredObsidianEntity extends Entity {
         }
 
         // 使黑曜石实体绕Z轴自旋 // Make the obsidian entity rotate around the Z-axis
-        this.setXRot(this.getXRot() + 1.0F);  // 每帧绕X轴自旋（你可以调整旋转角度）// Rotate around the X-axis by 1 degree per frame (can adjust the rotation angle)
-        this.setYRot(this.getYRot() + 5.0F);  // 每帧绕Y轴自旋（你可以调整旋转角度）// Rotate around the Y-axis by 5 degrees per frame (can adjust the rotation angle)
+        //this.setXRot(this.getXRot() + 1.0F);  // 每帧绕X轴自旋（你可以调整旋转角度）// Rotate around the X-axis by 1 degree per frame (can adjust the rotation angle)
+        //this.setYRot(this.getYRot() + 5.0F);  // 每帧绕Y轴自旋（你可以调整旋转角度）// Rotate around the Y-axis by 5 degrees per frame (can adjust the rotation angle)
 
         // 如果存在owner，并且不在客户端，执行吸引逻辑 // If there is an owner, and it's not on the client side, perform the attraction logic
         if (owner != null && !this.getCommandSenderWorld().isClientSide) {
@@ -75,15 +83,13 @@ public class SacredObsidianEntity extends Entity {
                 return;
             }
 
-            // 计算朝向玩家的运动方向 // Calculate the direction towards the player
-            Vec3 direction = owner.position().subtract(this.position()).normalize();
-            // 吸引速度系数 // Attraction speed coefficient
-            double attractionSpeed = 0.2;
-            Vec3 targetVelocity = direction.scale(attractionSpeed);  // 吸引速度
+            Vec3 dir = owner.position().subtract(position()).normalize();
+            Vec3 vel = dir.scale(0.2);
 
-            // 更新实体的运动，使其朝向玩家靠近 // Update the entity's movement to approach the player
-            this.setDeltaMovement(targetVelocity);
-            this.moveTo(this.getX() + targetVelocity.x, this.getY() + targetVelocity.y, this.getZ() + targetVelocity.z);
+            // 用 lerp-Motion 保证这次运动的速度也同步给客户端 // Use lerp-motion to ensure that the speed of this movement is also synchronized to the client
+            lerpMotion(vel.x, vel.y, vel.z);
+            // 用 move(...) 来更新服务器端位置，并排入下次同步 // Use move(...) to update the server-side location and row it for the next sync
+            move(MoverType.SELF, getDeltaMovement());
         }
     }
 
