@@ -1,12 +1,15 @@
 package com.netpdrmod.weapon;
 
+import com.netpdrmod.Netpdrmod;
 import com.netpdrmod.blockentity.SacredObsidianBlockEntity;
+import com.netpdrmod.client.ClientSpawnObsidianEffectPacket;
 import com.netpdrmod.data.SacredObsidianData;
-import com.netpdrmod.entity.SacredObsidianEntity;
 import com.netpdrmod.registry.ModEffect;
 import com.netpdrmod.registry.ModEnchantments;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
@@ -29,6 +32,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
+import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -74,6 +78,20 @@ public class SacredObsidianItem extends BaseItem {
         ItemStack itemStack = player.getItemInHand(hand);
 
         if (!world.isClientSide) {
+
+            // 设置冷却时间 // Set cooldown time
+            long currentTime = world.getGameTime();
+            CompoundTag tag = itemStack.getOrCreateTag();
+            long lastUse = tag.getLong("LastUseTime");
+
+            if (currentTime - lastUse < COOLDOWN_TIME) {
+
+                return InteractionResultHolder.fail(itemStack);
+            }
+
+            // 设置新的使用时间 // Set new usage time
+            tag.putLong("LastUseTime", currentTime);
+
             // 读取附魔等级，算出最大延伸距离 Read the enchantment level and calculate the maximum extension distance
             Map<Enchantment,Integer> enchMap = EnchantmentHelper.getEnchantments(itemStack);
             int reachLevel = enchMap.getOrDefault(ModEnchantments.OBSIDIAN_REACH.get(), 0);
@@ -89,8 +107,6 @@ public class SacredObsidianItem extends BaseItem {
             // 延伸黑曜石并处理目标实体 // Extend obsidian and handle target entity
             extendObsidianPathAndDamage(world, player, hitPos, itemStack, maxDistance);
 
-            // 设置冷却时间 // Set cooldown time
-            player.getCooldowns().addCooldown(this, COOLDOWN_TIME);
         }
 
         return InteractionResultHolder.sidedSuccess(itemStack, world.isClientSide());
@@ -230,11 +246,21 @@ public class SacredObsidianItem extends BaseItem {
                     UUID playerUuid = data.getPlayerUuid();
                     Player player = serverLevel.getPlayerByUUID(playerUuid);
 
+                    //if (player != null) {
+                        //SacredObsidianEntity obsidianEntity = new SacredObsidianEntity(serverLevel, pos.getX(), pos.getY(), pos.getZ());
+                        //obsidianEntity.setOwner(player);  // 设置玩家为拥有者 // Set the player as the owner
+                        //serverLevel.addFreshEntity(obsidianEntity);  // 将黑曜石实体添加到世界中 // Add the obsidian entity to the world
+                    //}
+
                     // 如果玩家存在，则生成黑曜石实体并设置其拥有者 // If the player exists, generate the Sacred Obsidian entity and set its owner
                     if (player != null) {
-                        SacredObsidianEntity obsidianEntity = new SacredObsidianEntity(serverLevel, pos.getX(), pos.getY(), pos.getZ());
-                        obsidianEntity.setOwner(player);  // 设置玩家为拥有者 // Set the player as the owner
-                        serverLevel.addFreshEntity(obsidianEntity);  // 将黑曜石实体添加到世界中 // Add the obsidian entity to the world
+                        Vec3 start = new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+                        Vec3 target = player.position().add(0, 1.0, 0); // 玩家头顶
+
+                        Netpdrmod.CHANNEL.send(
+                                PacketDistributor.PLAYER.with(() -> (ServerPlayer) player),
+                                new ClientSpawnObsidianEffectPacket(start, target, true)
+                        );
                     }
 
                     // 通知客户端生成粒子效果 // Notify the client to generate particle effects

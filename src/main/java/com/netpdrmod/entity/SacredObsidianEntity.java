@@ -1,6 +1,9 @@
 package com.netpdrmod.entity;
 
 import com.netpdrmod.registry.ModEntity;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MoverType;
@@ -19,6 +22,15 @@ public class SacredObsidianEntity extends Entity {
     private Player owner;  // 吸引的目标玩家 // The player who owns the entity
     private UUID ownerUUID;  // 玩家UUID用于保存玩家信息 // UUID of the player to store the player's information
 
+    //private static final EntityDataAccessor<Float> TARGET_X =
+            //SynchedEntityData.defineId(SacredObsidianEntity.class, EntityDataSerializers.FLOAT);
+    //private static final EntityDataAccessor<Float> TARGET_Y =
+            //SynchedEntityData.defineId(SacredObsidianEntity.class, EntityDataSerializers.FLOAT);
+    //private static final EntityDataAccessor<Float> TARGET_Z =
+            //SynchedEntityData.defineId(SacredObsidianEntity.class, EntityDataSerializers.FLOAT);
+
+    //private boolean positionInitialized = false; // 防止重复瞬移
+
     public SacredObsidianEntity(EntityType<? extends SacredObsidianEntity> entityType, Level level) {
         super(entityType, level);
         this.noPhysics = true;  // 禁用碰撞检测 // Disable collision detection
@@ -26,7 +38,7 @@ public class SacredObsidianEntity extends Entity {
 
     public SacredObsidianEntity(Level world, double x, double y, double z) {
         super(ModEntity.SACRED_OBSIDIAN_ITEM_ENTITY.get(), world);  // 使用自定义实体类型
-        this.setPos(x, y, z);
+        this.setPosRaw(x, y, z); // 原始位置设置，跳过同步标记
         this.noPhysics = true;  // 禁用碰撞检测 // Disable collision detection
     }
 
@@ -39,57 +51,48 @@ public class SacredObsidianEntity extends Entity {
     @Override
     protected void defineSynchedData() {
         // 此处可以定义需要同步的数据字段 // Define fields that need to be synchronized here
+        //this.entityData.define(TARGET_X, (float) this.getX());
+        //this.entityData.define(TARGET_Y, (float) this.getY());
+        //this.entityData.define(TARGET_Z, (float) this.getZ());
     }
 
     @Override
     public void tick() {
         super.tick();
 
-        // Client-only: 视觉旋转
-        if (this.level().isClientSide) {
-            this.setXRot(this.getXRot() + 0.5F);
-            this.setYRot(this.getYRot() + 2.5F);
-            return;
+        if (!level().isClientSide) {
+            System.out.printf("[Server] Tick Pos: %.3f, %.3f, %.3f\n", getX(), getY(), getZ());
+        } else {
+            System.out.printf("[Client] Tick Pos: %.3f, %.3f, %.3f | Old: %.3f, %.3f, %.3f\n",
+                    getX(), getY(), getZ(), xOld, yOld, zOld);
         }
 
-        // 检查是否存在owner // Check if the owner exists
+        // 旋转动画
+        this.setYRot(this.getYRot() + 2.5F);
+
+        // 恢复 owner
         if (owner == null && ownerUUID != null) {
-            // 如果没有owner，尝试恢复 // If there is no owner, try to recover it
-            Player player = this.getCommandSenderWorld().getPlayerByUUID(ownerUUID);
-            if (player != null) {
-                this.owner = player;
-            }
+            Player player = level().getPlayerByUUID(ownerUUID);
+            if (player != null) owner = player;
         }
+        if (owner == null) return;
 
-        // 使黑曜石实体绕Z轴自旋 // Make the obsidian entity rotate around the Z-axis
-        //this.setXRot(this.getXRot() + 1.0F);  // 每帧绕X轴自旋（你可以调整旋转角度）// Rotate around the X-axis by 1 degree per frame (can adjust the rotation angle)
-        //this.setYRot(this.getYRot() + 5.0F);  // 每帧绕Y轴自旋（你可以调整旋转角度）// Rotate around the Y-axis by 5 degrees per frame (can adjust the rotation angle)
-
-        // 如果存在owner，并且不在客户端，执行吸引逻辑 // If there is an owner, and it's not on the client side, perform the attraction logic
-        if (owner != null && !this.getCommandSenderWorld().isClientSide) {
-            double distance = this.owner.distanceTo(this);  // 计算与玩家的距离 // Calculate the distance to the player
-            double maxDistance = 128.0; // 设置距离限制 // Set a maximum distance limit
-
-            if (distance > maxDistance) {
-                this.discard(); // 如果距离超过限制，移除实体 // If distance exceeds the limit, remove the entity
+        if (!level().isClientSide) {
+            double dist = owner.distanceTo(this);
+            if (dist > 128.0) {
+                this.discard();
                 return;
             }
 
-            // 如果黑曜石实体距离玩家足够近，则移除并播放拾取声音 // If the obsidian entity is close enough to the player, remove it and play the pickup sound
-            double minDistance = 1.0;
-            if (distance < minDistance) {
+            if (this.getBoundingBox().intersects(owner.getBoundingBox())) {
                 playPickUpSound();
-                this.discard();  // 移除实体 // Remove the entity
+                this.discard();
                 return;
             }
 
-            Vec3 dir = owner.position().subtract(position()).normalize();
-            Vec3 vel = dir.scale(0.2);
-
-            // 用 lerp-Motion 保证这次运动的速度也同步给客户端 // Use lerp-motion to ensure that the speed of this movement is also synchronized to the client
-            lerpMotion(vel.x, vel.y, vel.z);
-            // 用 move(...) 来更新服务器端位置，并排入下次同步 // Use move(...) to update the server-side location and row it for the next sync
-            move(MoverType.SELF, getDeltaMovement());
+            Vec3 target = owner.position().add(0, 1.0, 0);
+            Vec3 velocity = target.subtract(this.position()).normalize().scale(0.1);
+            this.move(MoverType.SELF, velocity);
         }
     }
 
@@ -142,12 +145,18 @@ public class SacredObsidianEntity extends Entity {
     public void onAddedToWorld() {
         super.onAddedToWorld();
 
-        // 在实体添加到世界时恢复玩家  // Restore the player when the entity is added to the world
-        if (this.ownerUUID != null) {
-            Player player = this.getCommandSenderWorld().getPlayerByUUID(ownerUUID);
-            if (player != null) {
-                this.owner = player;
+        if (!level().isClientSide) {
+            if (this.ownerUUID != null) {
+                Player player = this.level().getPlayerByUUID(ownerUUID);
+                if (player != null) {
+                    this.owner = player;
+                }
             }
+        } else {
+            // 初始化插值参考点
+            this.xOld = this.getX();
+            this.yOld = this.getY();
+            this.zOld = this.getZ();
         }
     }
 }

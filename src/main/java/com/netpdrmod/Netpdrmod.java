@@ -1,10 +1,12 @@
 package com.netpdrmod;
 
 import com.mojang.logging.LogUtils;
+import com.netpdrmod.client.ClientSpawnObsidianEffectPacket;
 import com.netpdrmod.registry.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -22,6 +24,8 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -48,6 +52,21 @@ public class Netpdrmod {
             .title(Component.translatable("itemGroup.netpdr_creative_mode_tab"))
             .build());
 
+    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
+            new ResourceLocation("netpdrmod", "main"),
+            () -> "1.0",
+            s -> true,
+            s -> true
+    );
+
+    public static void registerPackets() {
+        int id = 0;
+        CHANNEL.registerMessage(id, ClientSpawnObsidianEffectPacket.class,
+                ClientSpawnObsidianEffectPacket::encode,
+                ClientSpawnObsidianEffectPacket::decode,
+                ClientSpawnObsidianEffectPacket::handle);
+    }
+
     public Netpdrmod() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
@@ -64,10 +83,12 @@ public class Netpdrmod {
         ModEffect.EFFECTS.register(modEventBus);
 
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.SPEC);
-        // 注册实体类型
+
         ModEntity.ENTITY_TYPES.register(modEventBus);
 
         ModEnchantments.register(modEventBus);
+
+        registerPackets();
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {

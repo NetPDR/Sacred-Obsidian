@@ -17,6 +17,7 @@ public class ModEntity {
                     .sized(0.25f, 0.25f) // 设置与普通掉落物相同的碰撞盒大小 // Set the collision box size to be the same as a regular item drop
                     .clientTrackingRange(8)    // 客户端跟踪距离：8 区块以内开始同步
                     .updateInterval(1)
+                    .setShouldReceiveVelocityUpdates(false) // 防止 velocity 抖动
                     .build(Netpdrmod.MODID + "sacred_obsidian_item_entity")
     );
 }
