@@ -9,7 +9,6 @@ import com.netpdrmod.registry.ModEnchantments;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
@@ -66,7 +65,7 @@ public class SacredObsidianItem extends BaseItem {
     private static final int EXTRA_PER_LEVEL   = 5;  // 每级多延伸 5 格 //Each level extends by 5 more tiles
     private static final float OBSIDIAN_DAMAGE = 25.0F;  // 黑曜石伤害 // Obsidian damage
     private static final double MAX_DIRECTION_CHANGE = 0.1;  // 随机方向变化幅度 // Random direction change amplitude
-    private static final int COOLDOWN_TIME = 30;  // 冷却时间 (30 ticks = 1.5秒) // Cooldown time (30 ticks = 1.5 seconds)
+    public static final int COOLDOWN_TIME = 30;  // 冷却时间 (30 ticks = 1.5秒) // Cooldown time (30 ticks = 1.5 seconds)
     private static final int OBSIDIAN_LIFETIME = 60;  // 黑曜石的存在时间 (60 ticks = 3秒) // Obsidian's lifetime (60 ticks = 3 seconds)
 
     public SacredObsidianItem(Properties properties) {
@@ -91,6 +90,7 @@ public class SacredObsidianItem extends BaseItem {
 
             // 设置新的使用时间 // Set new usage time
             tag.putLong("LastUseTime", currentTime);
+            tag.putInt("CooldownTicks", COOLDOWN_TIME);
 
             // 读取附魔等级，算出最大延伸距离 Read the enchantment level and calculate the maximum extension distance
             Map<Enchantment,Integer> enchMap = EnchantmentHelper.getEnchantments(itemStack);
@@ -253,12 +253,11 @@ public class SacredObsidianItem extends BaseItem {
                     //}
 
                     // 如果玩家存在，则生成黑曜石实体并设置其拥有者 // If the player exists, generate the Sacred Obsidian entity and set its owner
-                    if (player != null) {
+                    if (player != null && !world.isClientSide) {
                         Vec3 start = new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-                        Vec3 target = player.position().add(0, 1.0, 0); // 玩家头顶
-
+                        Vec3 target = player.position().add(0, 1.0, 0);
                         Netpdrmod.CHANNEL.send(
-                                PacketDistributor.PLAYER.with(() -> (ServerPlayer) player),
+                                PacketDistributor.ALL.noArg(),
                                 new ClientSpawnObsidianEffectPacket(start, target, true)
                         );
                     }

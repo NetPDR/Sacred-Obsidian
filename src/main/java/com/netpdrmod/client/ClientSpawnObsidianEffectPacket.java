@@ -7,16 +7,13 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.function.Supplier;
 
 public record ClientSpawnObsidianEffectPacket(Vec3 start, Vec3 target, boolean followPlayer) {
-
     public static void encode(ClientSpawnObsidianEffectPacket msg, FriendlyByteBuf buf) {
         buf.writeDouble(msg.start.x);
         buf.writeDouble(msg.start.y);
         buf.writeDouble(msg.start.z);
-
         buf.writeDouble(msg.target.x);
         buf.writeDouble(msg.target.y);
         buf.writeDouble(msg.target.z);
-
         buf.writeBoolean(msg.followPlayer);
     }
 
