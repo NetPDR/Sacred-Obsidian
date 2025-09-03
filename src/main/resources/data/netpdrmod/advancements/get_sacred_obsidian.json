@@ -18,17 +18,22 @@
   },
 
   "criteria": {
-    "got_sword": {
+    "got_obsidian": {
       "trigger": "minecraft:inventory_changed",
       "conditions": {
         "items": [
-          { "item": "netpdrmod:sacred_obsidian" }
+          {
+            "items": ["netpdrmod:sacred_obsidian"],
+            "count": {
+              "min": 1
+            }
+          }
         ]
       }
     }
   },
 
   "requirements": [
-    [ "got_sword" ]
+    [ "got_obsidian" ]
   ]
 }
