@@ -9,5 +9,9 @@
   "advancement.netpdrmod.root.title": "神圣黑曜石",
   "advancement.netpdrmod.root.description": "欢迎来到有神圣黑曜石的世界",
   "advancement.netpdrmod.get_sacred_obsidian.title": "Herobrine的黑曜石?",
-  "advancement.netpdrmod.get_sacred_obsidian.description": "获得神圣黑曜石"
+  "advancement.netpdrmod.get_sacred_obsidian.description": "获得神圣黑曜石",
+  "advancement.netpdrmod.switch_form.title": "形态切换",
+  "advancement.netpdrmod.switch_form.description": "成功切换了神圣黑曜石的形态",
+  "message.sacred_obsidian.switch_to_second": "已切换到第二形态",
+  "message.sacred_obsidian.switch_to_first": "已切换到第一形态"
 }

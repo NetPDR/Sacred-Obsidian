@@ -1,0 +1,25 @@
+{
+  "parent": "netpdrmod:get_sacred_obsidian",
+
+  "display": {
+    "icon": {
+      "item": "netpdrmod:sacred_obsidian"
+    },
+    "title": {
+      "translate": "advancement.netpdrmod.switch_form.title"
+    },
+    "description": {
+      "translate": "advancement.netpdrmod.switch_form.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+
+  "criteria": {
+    "switch_form": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

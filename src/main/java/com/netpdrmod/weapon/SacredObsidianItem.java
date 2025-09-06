@@ -6,9 +6,14 @@ import com.netpdrmod.client.ClientSpawnObsidianEffectPacket;
 import com.netpdrmod.data.SacredObsidianData;
 import com.netpdrmod.registry.ModEffect;
 import com.netpdrmod.registry.ModEnchantments;
+import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
@@ -17,6 +22,7 @@ import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -62,7 +68,7 @@ public class SacredObsidianItem extends BaseItem {
 
     //private static final int MAX_DISTANCE = 15;  // 最大延伸距离 // Maximum extension distance
     private static final int BASE_MAX_DISTANCE = 15;
-    private static final int EXTRA_PER_LEVEL   = 5;  // 每级多延伸 5 格 //Each level extends by 5 more tiles
+    private static final int EXTRA_PER_LEVEL = 5;  // 每级多延伸 5 格 //Each level extends by 5 more tiles
     private static final float OBSIDIAN_DAMAGE = 25.0F;  // 黑曜石伤害 // Obsidian damage
     private static final double MAX_DIRECTION_CHANGE = 0.1;  // 随机方向变化幅度 // Random direction change amplitude
     public static final int COOLDOWN_TIME = 30;  // 冷却时间 (30 ticks = 1.5秒) // Cooldown time (30 ticks = 1.5 seconds)
@@ -73,57 +79,271 @@ public class SacredObsidianItem extends BaseItem {
     }
 
     @Override
-    public @NotNull InteractionResultHolder<ItemStack> use(Level world, Player player, @NotNull InteractionHand hand) {
+    public @NotNull InteractionResultHolder<ItemStack> use(@NotNull Level world, Player player, @NotNull InteractionHand hand) {
         ItemStack itemStack = player.getItemInHand(hand);
+        CompoundTag tag = itemStack.getOrCreateTag();
 
-        if (!world.isClientSide) {
+        // 切换形态（Shift+右键） Switch Form // (Shift+Right Click)
+        if (!world.isClientSide && player.isShiftKeyDown()) {
+            boolean secondForm = tag.getBoolean("SecondForm");
+            tag.putBoolean("SecondForm", !secondForm);
 
-            // 设置冷却时间 // Set cooldown time
-            long currentTime = world.getGameTime();
-            CompoundTag tag = itemStack.getOrCreateTag();
-            long lastUse = tag.getLong("LastUseTime");
+            // 切换时终止延伸 Terminate // extension during switching
+            tag.putBoolean("IsExtending", false);
 
-            if (currentTime - lastUse < COOLDOWN_TIME) {
-
-                return InteractionResultHolder.fail(itemStack);
+            if (!secondForm) {
+                player.displayClientMessage(Component.translatable("message.sacred_obsidian.switch_to_second"), true);
+            } else {
+                player.displayClientMessage(Component.translatable("message.sacred_obsidian.switch_to_first"), true);
             }
 
-            // 设置新的使用时间 // Set new usage time
-            tag.putLong("LastUseTime", currentTime);
-            tag.putInt("CooldownTicks", COOLDOWN_TIME);
+            if (player instanceof ServerPlayer serverPlayer) {
+                ResourceLocation id = new ResourceLocation("netpdrmod", "switch_form");
+                Advancement adv = serverPlayer.server.getAdvancements().getAdvancement(id);
+                if (adv != null) {
+                    AdvancementProgress progress = serverPlayer.getAdvancements().getOrStartProgress(adv);
+                    if (!progress.isDone()) {
+                        for (String criteria : progress.getRemainingCriteria()) {
+                            serverPlayer.getAdvancements().award(adv, criteria);
+                        }
+                    }
+                }
+            }
 
-            // 读取附魔等级，算出最大延伸距离 Read the enchantment level and calculate the maximum extension distance
-            Map<Enchantment,Integer> enchMap = EnchantmentHelper.getEnchantments(itemStack);
-            int reachLevel = enchMap.getOrDefault(ModEnchantments.OBSIDIAN_REACH.get(), 0);
-            int maxDistance = BASE_MAX_DISTANCE + reachLevel * EXTRA_PER_LEVEL;
+            return InteractionResultHolder.sidedSuccess(itemStack, world.isClientSide());
+        }
 
-            // 播放铁砧声音 // Play anvil sound
-            world.playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.0F, 1.0F);
+        if (!world.isClientSide) {
+                long currentTime = world.getGameTime();
+                long lastUse = tag.getLong("LastUseTime");
 
-            // 射线检测以获取命中位置 // Ray tracing to get hit position
-            BlockHitResult hitResult = rayTrace(world, player, maxDistance);
-            BlockPos hitPos = hitResult.getBlockPos();
+                if (currentTime - lastUse < COOLDOWN_TIME) {
 
-            // 延伸黑曜石并处理目标实体 // Extend obsidian and handle target entity
-            extendObsidianPathAndDamage(world, player, hitPos, itemStack, maxDistance);
+                    return InteractionResultHolder.fail(itemStack);
+                }
 
+                // 设置新的使用时间 // Set new usage time
+                tag.putLong("LastUseTime", currentTime);
+                tag.putInt("CooldownTicks", COOLDOWN_TIME);
+
+            if (!tag.getBoolean("SecondForm")) {
+                // 读取附魔等级，算出最大延伸距离 Read the enchantment level and calculate the maximum extension distance
+                Map<Enchantment, Integer> enchMap = EnchantmentHelper.getEnchantments(itemStack);
+                int reachLevel = enchMap.getOrDefault(ModEnchantments.OBSIDIAN_REACH.get(), 0);
+                int maxDistance = BASE_MAX_DISTANCE + reachLevel * EXTRA_PER_LEVEL;
+
+                // 播放铁砧声音 // Play anvil sound
+                world.playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.0F, 1.0F);
+
+                // 射线检测以获取命中位置 // Ray tracing to get hit position
+                BlockHitResult hitResult = rayTrace(world, player, maxDistance);
+                BlockPos hitPos = hitResult.getBlockPos();
+
+                // 延伸黑曜石并处理目标实体 // Extend obsidian and handle target entity
+                extendObsidianPathAndDamage(world, player, hitPos, itemStack, maxDistance);
+
+            } else {
+                // ------------------ 第二形态逻辑 Second-form logic------------------
+                Map<Enchantment, Integer> enchMap = EnchantmentHelper.getEnchantments(itemStack);
+                int reachLevel = enchMap.getOrDefault(ModEnchantments.OBSIDIAN_REACH.get(), 0);
+                int maxBlocks = BASE_MAX_DISTANCE + reachLevel * EXTRA_PER_LEVEL;
+
+                tag.putBoolean("IsExtending", true);
+                tag.putInt("ExtendBlocks", 0);
+                tag.putInt("MaxBlocks", maxBlocks);
+
+                tag.putDouble("DirX", player.getLookAngle().x);
+                tag.putDouble("DirY", player.getLookAngle().y);
+                tag.putDouble("DirZ", player.getLookAngle().z);
+                tag.putDouble("PosX", player.getX());
+                tag.putDouble("PosY", player.getEyeY());
+                tag.putDouble("PosZ", player.getZ());
+
+                world.playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.0F, 1.0F);
+            }
         }
 
         return InteractionResultHolder.sidedSuccess(itemStack, world.isClientSide());
     }
 
+    @Override
+    public boolean onDroppedByPlayer(ItemStack stack, Player player) {
+        CompoundTag tag = stack.getOrCreateTag();
+        tag.putBoolean("IsExtending", false); // 停止延伸 // Stop extending
+        return true;
+    }
+
+    @Override
+    public void inventoryTick(@NotNull ItemStack stack, @NotNull Level world, @NotNull Entity entity, int slot, boolean selected) {
+        super.inventoryTick(stack, world, entity, slot, selected);
+
+        if (!(entity instanceof Player player) || world.isClientSide) return;
+        CompoundTag tag = stack.getOrCreateTag();
+
+        if (!tag.getBoolean("SecondForm") || !tag.getBoolean("IsExtending")) return;
+
+        int blocks = tag.getInt("ExtendBlocks");
+        int maxBlocks = tag.getInt("MaxBlocks");
+        if (blocks >= maxBlocks) {
+            tag.putBoolean("IsExtending", false);
+            return;
+        }
+
+        // ===== 可调常量（可改为类常量）Adjustable constant (can be changed to class constant) =====
+        final double STEP_DISTANCE = 1.0;         // 每块间距（格数） // Interval (number of grids) per piece
+        final double MAX_MOVE_PER_TICK = 0.8;     // 游标每 tick 最大移动（格数） // Maximum cursor movement per tick (in number of squares)
+        final double DESIRED_DISTANCE_MULT = blocks + 1; // desired 距离倍数 // desired distance multiplier
+        final double QUICK_ACCEPT_ALIGNMENT = 0.92; // 快速接受阈值 // Quick acceptance threshold
+        // ======================================
+
+        Vec3 eye = player.getEyePosition(1.0F);
+        Vec3 look = player.getLookAngle().normalize();
+
+        // desired（基于玩家眼位和实时视角） // desired（基于玩家眼位和实时视角）
+        Vec3 desired = eye.add(look.scale(DESIRED_DISTANCE_MULT * STEP_DISTANCE));
+
+        // 读取或初始化 cursor（游标） // Read or initialize cursor
+        Vec3 cursor;
+        if (tag.contains("CursorX")) {
+            cursor = new Vec3(tag.getDouble("CursorX"), tag.getDouble("CursorY"), tag.getDouble("CursorZ"));
+        } else {
+            cursor = desired;
+            tag.putDouble("CursorX", cursor.x);
+            tag.putDouble("CursorY", cursor.y);
+            tag.putDouble("CursorZ", cursor.z);
+        }
+
+        // 限速平滑移动 cursor 朝 desired（直接使用常量，无冗余局部变量） // Limit the speed and smoothly move the cursor towards the desired position (using constants directly, without redundant local variables)
+        Vec3 delta = desired.subtract(cursor);
+        if (delta.length() > 1e-6) {
+            Vec3 move = delta;
+            if (move.length() > MAX_MOVE_PER_TICK) move = move.normalize().scale(MAX_MOVE_PER_TICK);
+            cursor = cursor.add(move);
+            tag.putDouble("CursorX", cursor.x);
+            tag.putDouble("CursorY", cursor.y);
+            tag.putDouble("CursorZ", cursor.z);
+        }
+
+        // 获取上次已放方块中心 // Get the center of the last placed block
+        if (blocks == 0) {
+            // 第一个方块：直接以玩家眼位沿视线 STEP_DISTANCE 处为目标 // The first square: directly target the position STEP_DISTANCE away along the player's line of sight
+            Vec3 firstTarget = eye.add(look.scale(STEP_DISTANCE));
+            BlockPos targetPos = BlockPos.containing(firstTarget);
+            BlockState state = world.getBlockState(targetPos);
+            if (world.isEmptyBlock(targetPos) || state.canBeReplaced()) {
+                placeObsidianAt(world, stack, tag, player, targetPos, look);
+            } else {
+                tag.putBoolean("IsExtending", false);
+            }
+            return;
+        }
+
+        Vec3 lastCenter = new Vec3(tag.getDouble("PosX"), tag.getDouble("PosY"), tag.getDouble("PosZ"));
+        BlockPos lastPos = BlockPos.containing(lastCenter);
+
+        // 当游标距离上一个中心达到阈值才尝试放下下一块 // Only when the cursor is within a certain threshold distance from the previous center, will an attempt be made to place the next piece
+        double distSinceLast = cursor.distanceTo(lastCenter);
+        if (distSinceLast < STEP_DISTANCE - 1e-6) {
+            return; // 尚未到达放置阈值 // The placement threshold has not been reached yet
+        }
+
+        // 选择相邻格：使用整洁的 helper（不含多余形参） // Select adjacent cells: Use a clean helper function (without unnecessary parameters)
+        BlockPos nextPos = chooseAdjacentTowardsCursor(world, lastPos, cursor, look, QUICK_ACCEPT_ALIGNMENT);
+        if (nextPos == null) {
+            tag.putBoolean("IsExtending", false); // 被阻挡 -> 停止 // Being blocked -> Stop
+            return;
+        }
+
+        placeObsidianAt(world, stack, tag, player, nextPos, look);
+    }
+
+    /**
+     * 选择 lastPos 六个相邻格中最朝向 cursor 的那个可放格；无可放则返回 null。 Select the most cursor-oriented available grid from the six adjacent grids of lastPos; if there is no available grid, return null.
+     * quickAcceptThreshold 用于快速接受高度对齐格子。 Used for quickly accepting highly aligned grids
+     */
+    @Nullable
+    private BlockPos chooseAdjacentTowardsCursor(Level world, BlockPos lastPos, Vec3 cursor, Vec3 look, double quickAcceptThreshold) {
+        BlockPos[] neighbors = new BlockPos[] {
+                lastPos.north(), lastPos.south(), lastPos.west(), lastPos.east(), lastPos.above(), lastPos.below()
+        };
+
+        Vec3 lastCenter = new Vec3(lastPos.getX() + 0.5, lastPos.getY() + 0.5, lastPos.getZ() + 0.5);
+        Vec3 dirToCursor = cursor.subtract(lastCenter);
+        if (dirToCursor.length() == 0) dirToCursor = look;
+        else dirToCursor = dirToCursor.normalize();
+
+        BlockPos best = null;
+        double bestDot = Double.NEGATIVE_INFINITY;
+
+        for (BlockPos cand : neighbors) {
+            BlockState s = world.getBlockState(cand);
+            if (!(world.isEmptyBlock(cand) || s.canBeReplaced())) continue;
+
+            Vec3 candCenter = new Vec3(cand.getX() + 0.5, cand.getY() + 0.5, cand.getZ() + 0.5);
+            Vec3 neighborVec = candCenter.subtract(lastCenter);
+            if (neighborVec.length() == 0) continue;
+            neighborVec = neighborVec.normalize();
+
+            double dot = neighborVec.dot(dirToCursor);
+            if (dot > bestDot) {
+                bestDot = dot;
+                best = cand;
+            }
+            if (dot >= quickAcceptThreshold) return cand; // 快速接受 // Quick acceptance
+        }
+        return best;
+    }
+
+    /** placeObsidianAt 保持原逻辑：放方块、加入 SacredObsidianData、命中检测、更新 NBT ; placeObsidianAt maintains the original logic: placing blocks, adding SacredObsidianData, hit detection, and updating NBT */
+    private void placeObsidianAt(Level world, ItemStack stack, CompoundTag tag, Player player, BlockPos pos, Vec3 dirForUpdate) {
+        world.setBlock(pos, Blocks.OBSIDIAN.defaultBlockState(), 3);
+        world.setBlockEntity(new SacredObsidianBlockEntity(pos, Blocks.OBSIDIAN.defaultBlockState()));
+
+        if (world instanceof ServerLevel serverLevel) {
+            SacredObsidianData data = SacredObsidianData.get(serverLevel);
+            data.getObsidianData().put(pos, OBSIDIAN_LIFETIME);
+        }
+
+        LivingEntity target = findTargetEntityAtPosition(world, pos, player);
+        if (target != null) {
+            Map<Enchantment,Integer> enchMap = EnchantmentHelper.getEnchantments(stack);
+            int powerLevel = enchMap.getOrDefault(ModEnchantments.OBSIDIAN_POWER.get(), 0);
+            float damage = OBSIDIAN_DAMAGE + powerLevel * 5.0F;
+
+            DamageSource src = world.damageSources().playerAttack(player);
+            target.hurt(src, damage);
+
+            target.addEffect(new MobEffectInstance(ModEffect.IRRECONCILABLE_CRACK.get(), 100, 0));
+            target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 100, 0));
+
+            world.playSound(null, pos, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.0F, 1.0F);
+            tag.putBoolean("IsExtending", false);
+            return;
+        }
+
+        Vec3 nextCenter = new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        tag.putDouble("PosX", nextCenter.x);
+        tag.putDouble("PosY", nextCenter.y);
+        tag.putDouble("PosZ", nextCenter.z);
+        tag.putInt("ExtendBlocks", tag.getInt("ExtendBlocks") + 1);
+
+        tag.putDouble("DirX", dirForUpdate.x);
+        tag.putDouble("DirY", dirForUpdate.y);
+        tag.putDouble("DirZ", dirForUpdate.z);
+    }
+
     /**
      * 扩展黑曜石路径并对目标实体造成伤害 Extend the obsidian path and deal damage to the target entity
      *
-     * @param world     当前游戏世界 Current game world
-     * @param player    当前使用物品的玩家 Player using the item
-     * @param targetPos 射线检测命中的位置 Hit position from ray tracing
+     * @param world       当前游戏世界 Current game world
+     * @param player      当前使用物品的玩家 Player using the item
+     * @param targetPos   射线检测命中的位置 Hit position from ray tracing
      * @param maxDistance 本次可以延伸的最大距离 The maximum distance that can be extended this time
      */
     private void extendObsidianPathAndDamage(Level world, Player player, BlockPos targetPos, ItemStack stack, int maxDistance) {
 
         // 先读取 Obsidian Power 等级 // Read the Obsidian Power grade first
-        Map<Enchantment,Integer> enchMap = EnchantmentHelper.getEnchantments(stack);
+        Map<Enchantment, Integer> enchMap = EnchantmentHelper.getEnchantments(stack);
         int powerLevel = enchMap.getOrDefault(ModEnchantments.OBSIDIAN_POWER.get(), 0);
 
         // 计算每次造成的伤害：基础 + 每级5点 // Calculate the damage dealt each time: base + 5 points per level
@@ -247,9 +467,9 @@ public class SacredObsidianItem extends BaseItem {
                     Player player = serverLevel.getPlayerByUUID(playerUuid);
 
                     //if (player != null) {
-                        //SacredObsidianEntity obsidianEntity = new SacredObsidianEntity(serverLevel, pos.getX(), pos.getY(), pos.getZ());
-                        //obsidianEntity.setOwner(player);  // 设置玩家为拥有者 // Set the player as the owner
-                        //serverLevel.addFreshEntity(obsidianEntity);  // 将黑曜石实体添加到世界中 // Add the obsidian entity to the world
+                    //SacredObsidianEntity obsidianEntity = new SacredObsidianEntity(serverLevel, pos.getX(), pos.getY(), pos.getZ());
+                    //obsidianEntity.setOwner(player);  // 设置玩家为拥有者 // Set the player as the owner
+                    //serverLevel.addFreshEntity(obsidianEntity);  // 将黑曜石实体添加到世界中 // Add the obsidian entity to the world
                     //}
 
                     // 如果玩家存在，则生成黑曜石实体并设置其拥有者 // If the player exists, generate the Sacred Obsidian entity and set its owner
