@@ -34,6 +34,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -41,17 +42,9 @@ import net.minecraftforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 public class SacredObsidianItem extends BaseItem {
-
-    @Override
-    protected String getDescriptionKey() {
-        return "item.sacred_obsidian.tooltip"; // 为这个物品返回对应的描述键 // Return the corresponding description key for this item
-    }
 
     @Override
     public float getDestroySpeed(@NotNull ItemStack stack, BlockState state) {
@@ -69,10 +62,10 @@ public class SacredObsidianItem extends BaseItem {
     //private static final int MAX_DISTANCE = 15;  // 最大延伸距离 // Maximum extension distance
     private static final int BASE_MAX_DISTANCE = 15;
     private static final int EXTRA_PER_LEVEL = 5;  // 每级多延伸 5 格 //Each level extends by 5 more tiles
-    private static final float OBSIDIAN_DAMAGE = 25.0F;  // 黑曜石伤害 // Obsidian damage
+    public static final float OBSIDIAN_DAMAGE = 25.0F;  // 黑曜石伤害 // Obsidian damage
     private static final double MAX_DIRECTION_CHANGE = 0.1;  // 随机方向变化幅度 // Random direction change amplitude
     public static final int COOLDOWN_TIME = 30;  // 冷却时间 (30 ticks = 1.5秒) // Cooldown time (30 ticks = 1.5 seconds)
-    private static final int OBSIDIAN_LIFETIME = 60;  // 黑曜石的存在时间 (60 ticks = 3秒) // Obsidian's lifetime (60 ticks = 3 seconds)
+    public static final int OBSIDIAN_LIFETIME = 60;  // 黑曜石的存在时间 (60 ticks = 3秒) // Obsidian's lifetime (60 ticks = 3 seconds)
 
     public SacredObsidianItem(Properties properties) {
         super(properties.stacksTo(1));
@@ -178,6 +171,14 @@ public class SacredObsidianItem extends BaseItem {
         super.inventoryTick(stack, world, entity, slot, selected);
 
         if (!(entity instanceof Player player) || world.isClientSide) return;
+
+        // 如果玩家死亡、进入旁观者模式或实体已移除，则立即把 IsExtending 设为 false 并返回 // If the player dies, enters spectator mode, or the entity has been removed, immediately set IsExtending to false and return
+        if (!player.isAlive() || player.isSpectator() || player.isRemoved()) {
+            CompoundTag t = stack.getOrCreateTag();
+            t.putBoolean("IsExtending", false);
+            return;
+        }
+
         CompoundTag tag = stack.getOrCreateTag();
 
         if (!tag.getBoolean("SecondForm") || !tag.getBoolean("IsExtending")) return;
@@ -216,8 +217,7 @@ public class SacredObsidianItem extends BaseItem {
         // 限速平滑移动 cursor 朝 desired（直接使用常量，无冗余局部变量） // Limit the speed and smoothly move the cursor towards the desired position (using constants directly, without redundant local variables)
         Vec3 delta = desired.subtract(cursor);
         if (delta.length() > 1e-6) {
-            Vec3 move = delta;
-            if (move.length() > MAX_MOVE_PER_TICK) move = move.normalize().scale(MAX_MOVE_PER_TICK);
+            Vec3 move = delta.length() > MAX_MOVE_PER_TICK ? delta.normalize().scale(MAX_MOVE_PER_TICK) : delta;
             cursor = cursor.add(move);
             tag.putDouble("CursorX", cursor.x);
             tag.putDouble("CursorY", cursor.y);
@@ -227,8 +227,7 @@ public class SacredObsidianItem extends BaseItem {
         // 获取上次已放方块中心 // Get the center of the last placed block
         if (blocks == 0) {
             // 第一个方块：直接以玩家眼位沿视线 STEP_DISTANCE 处为目标 // The first square: directly target the position STEP_DISTANCE away along the player's line of sight
-            Vec3 firstTarget = eye.add(look.scale(STEP_DISTANCE));
-            BlockPos targetPos = BlockPos.containing(firstTarget);
+            BlockPos targetPos = BlockPos.containing(eye.add(look.scale(STEP_DISTANCE)));
             BlockState state = world.getBlockState(targetPos);
             if (world.isEmptyBlock(targetPos) || state.canBeReplaced()) {
                 placeObsidianAt(world, stack, tag, player, targetPos, look);
@@ -242,10 +241,7 @@ public class SacredObsidianItem extends BaseItem {
         BlockPos lastPos = BlockPos.containing(lastCenter);
 
         // 当游标距离上一个中心达到阈值才尝试放下下一块 // Only when the cursor is within a certain threshold distance from the previous center, will an attempt be made to place the next piece
-        double distSinceLast = cursor.distanceTo(lastCenter);
-        if (distSinceLast < STEP_DISTANCE - 1e-6) {
-            return; // 尚未到达放置阈值 // The placement threshold has not been reached yet
-        }
+        if (cursor.distanceTo(lastCenter) < STEP_DISTANCE - 1e-6) return;// 尚未到达放置阈值 // The placement threshold has not been reached yet
 
         // 选择相邻格：使用整洁的 helper（不含多余形参） // Select adjacent cells: Use a clean helper function (without unnecessary parameters)
         BlockPos nextPos = chooseAdjacentTowardsCursor(world, lastPos, cursor, look, QUICK_ACCEPT_ALIGNMENT);
@@ -301,7 +297,8 @@ public class SacredObsidianItem extends BaseItem {
 
         if (world instanceof ServerLevel serverLevel) {
             SacredObsidianData data = SacredObsidianData.get(serverLevel);
-            data.getObsidianData().put(pos, OBSIDIAN_LIFETIME);
+            data.putObsidian(pos, OBSIDIAN_LIFETIME);   // 使用封装，自动 setDirty() // Use encapsulation to automatically call setDirty()
+            data.setOwner(pos, player.getUUID()); // 绑定归属 // Binding ownership
         }
 
         LivingEntity target = findTargetEntityAtPosition(world, pos, player);
@@ -353,7 +350,6 @@ public class SacredObsidianItem extends BaseItem {
         Vec3 currentPos = player.position();
         Vec3 direction = Vec3.atCenterOf(targetPos).subtract(currentPos).normalize();
         SacredObsidianData data = SacredObsidianData.get((ServerLevel) world); // 获取数据存储 // Get data store
-        data.setPlayerUuid(player.getUUID());  // 设置玩家的 UUID
 
         for (int i = 0; i < maxDistance; i++) {
             direction = applyRandomDirectionChange(direction, random);
@@ -365,11 +361,13 @@ public class SacredObsidianItem extends BaseItem {
             if (world.isEmptyBlock(nextPos) || blockState.canBeReplaced()) {
                 world.setBlock(nextPos, Blocks.OBSIDIAN.defaultBlockState(), 3);
                 world.setBlockEntity(new SacredObsidianBlockEntity(nextPos, Blocks.OBSIDIAN.defaultBlockState()));
-                data.getObsidianData().put(nextPos, OBSIDIAN_LIFETIME); // 直接存储到数据 // Directly store to data
+                data.putObsidian(nextPos, OBSIDIAN_LIFETIME); // 使用封装 // Use encapsulation
+                data.setOwner(nextPos, player.getUUID()); // 绑定归属 // Binding ownership
             }
 
-            LivingEntity target = findTargetEntityAtPosition(world, nextPos, player);
-            if (target != null) {
+            List<LivingEntity> entities = world.getEntitiesOfClass(LivingEntity.class, new AABB(nextPos).inflate(0.5), e -> e != player);
+            if (!entities.isEmpty()) {
+                LivingEntity target = entities.get(0);
                 DamageSource damageSource = world.damageSources().playerAttack(player);
                 target.hurt(damageSource, damagePerHit);
                 target.addEffect(new MobEffectInstance(ModEffect.IRRECONCILABLE_CRACK.get(), 100, 0));
@@ -417,11 +415,9 @@ public class SacredObsidianItem extends BaseItem {
      * @return 返回命中的方块 The hit block
      */
     private BlockHitResult rayTrace(Level world, Player player, int maxDistance) {
-        Vec3 eyePosition = player.getEyePosition(1.0F);
-        Vec3 lookVector = player.getLookAngle().scale(maxDistance);
-        Vec3 traceEnd = eyePosition.add(lookVector);
-        ClipContext context = new ClipContext(eyePosition, traceEnd, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player);
-        return world.clip(context);
+        Vec3 eyePos = player.getEyePosition(1.0F);
+        Vec3 look = player.getLookAngle().scale(maxDistance);
+        return world.clip(new ClipContext(eyePos, eyePos.add(look), ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
     }
 
     /**
@@ -446,12 +442,11 @@ public class SacredObsidianItem extends BaseItem {
 
         if (world instanceof ServerLevel serverLevel) {  // 确保是 ServerLevel // Ensure that is ServerLevel
             SacredObsidianData data = SacredObsidianData.get(serverLevel);
-            Map<BlockPos, Integer> obsidianBlocks = data.getObsidianData();
 
-            Iterator<Map.Entry<BlockPos, Integer>> iterator = obsidianBlocks.entrySet().iterator();
+            // 先拷贝一份可变 Map 以便安全修改（并避免直接操作可能为不可变视图的返回值）
+            Map<BlockPos, Integer> obsidianBlocks = new HashMap<>(data.getObsidianData());
 
-            while (iterator.hasNext()) {
-                Map.Entry<BlockPos, Integer> entry = iterator.next();
+            for (Map.Entry<BlockPos, Integer> entry : obsidianBlocks.entrySet()) {
                 BlockPos pos = entry.getKey();
                 int ticksLeft = entry.getValue();
 
@@ -462,9 +457,19 @@ public class SacredObsidianItem extends BaseItem {
                     world.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
                     world.playSound(null, pos, SoundEvents.STONE_BREAK, SoundSource.BLOCKS, 1.0F, 1.0F);
 
-                    // 获取玩家 UUID // Get the player's UUID
-                    UUID playerUuid = data.getPlayerUuid();
-                    Player player = serverLevel.getPlayerByUUID(playerUuid);
+                    // 获取并处理归属玩家
+                    data.getOwner(pos).ifPresent(uuid -> {
+                        Player player = serverLevel.getPlayerByUUID(uuid);
+                        if (player != null && !world.isClientSide) {
+                            Vec3 start = new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+                            Vec3 target = player.position().add(0, 1.0, 0);
+
+                            Netpdrmod.CHANNEL.send(
+                                    PacketDistributor.ALL.noArg(),
+                                    new ClientSpawnObsidianEffectPacket(start, target, true)
+                            );
+                        }
+                    });
 
                     //if (player != null) {
                     //SacredObsidianEntity obsidianEntity = new SacredObsidianEntity(serverLevel, pos.getX(), pos.getY(), pos.getZ());
@@ -472,30 +477,22 @@ public class SacredObsidianItem extends BaseItem {
                     //serverLevel.addFreshEntity(obsidianEntity);  // 将黑曜石实体添加到世界中 // Add the obsidian entity to the world
                     //}
 
-                    // 如果玩家存在，则生成黑曜石实体并设置其拥有者 // If the player exists, generate the Sacred Obsidian entity and set its owner
-                    if (player != null && !world.isClientSide) {
-                        Vec3 start = new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-                        Vec3 target = player.position().add(0, 1.0, 0);
-                        Netpdrmod.CHANNEL.send(
-                                PacketDistributor.ALL.noArg(),
-                                new ClientSpawnObsidianEffectPacket(start, target, true)
-                        );
-                    }
-
                     // 通知客户端生成粒子效果 // Notify the client to generate particle effects
                     notifyClientForParticles(world, pos);
 
-                    iterator.remove();  // 移除已处理的条目 // Remove the processed entry
+                    // 使用封装方法移除条目并清理 owner（会 setDirty） // Use encapsulation method to remove the entry and clean up the owner (which will setDirty)
+                    data.removeObsidian(pos);
+                    data.removeOwner(pos);
+
                 } else if (blockState.is(Blocks.OBSIDIAN)) {
                     // 每次 tick 只减少 1 // Decrease by 1 each tick
-                    entry.setValue(ticksLeft - 1);
+                    data.putObsidian(pos, ticksLeft - 1);
                 } else {
                     // 如果方块不是黑曜石，直接移除记录，防止误删其他方块 // If the block is not obsidian, remove the record directly to prevent incorrect deletion of other blocks
-                    iterator.remove();
+                    data.removeObsidian(pos);
+                    data.removeOwner(pos); // 清理归属 // Ownership cleanup
                 }
             }
-            // 更新数据回保存 // Update data and save
-            data.setObsidianData(obsidianBlocks);
         }
     }
 
