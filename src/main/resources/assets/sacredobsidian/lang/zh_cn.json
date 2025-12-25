@@ -1,0 +1,21 @@
+{
+  "item.sacredobsidian.sacred_obsidian": "神圣黑曜石",
+  "item.sacred_obsidian.tooltip": "向目标延伸黑曜石方块，造成 %s 点伤害并标记目标 %s 秒。黑曜石方块存在 %s 秒，武器冷却为 %s 秒。按 Shift + 右键切换形态",
+  "itemGroup.netpdr_creative_mode_tab": "神圣黑曜石",
+  "effect.sacredobsidian.irreconcilable_crack": "Herobrine的标记",
+  "entity.sacredobsidian.sacred_obsidian_item_entity": "黑曜石",
+  "enchantment.sacredobsidian.obsidian_reach": "黑曜石延伸",
+  "enchantment.sacredobsidian.obsidian_power": "黑曜石力量",
+  "enchantment.sacredobsidian.obsidian_reach.desc": "增加神圣黑曜石延伸黑曜石方块的距离.",
+  "enchantment.sacredobsidian.obsidian_power.desc": "增加神圣黑曜石延伸黑曜石方块时对目标造成的伤害.",
+  "advancement.sacredobsidian.root.title": "神圣黑曜石",
+  "advancement.sacredobsidian.root.description": "欢迎来到有神圣黑曜石的世界",
+  "advancement.sacredobsidian.get_sacred_obsidian.title": "Herobrine的黑曜石?",
+  "advancement.sacredobsidian.get_sacred_obsidian.description": "获得神圣黑曜石",
+  "advancement.sacredobsidian.switch_form.title": "形态切换",
+  "advancement.sacredobsidian.switch_form.description": "成功切换了神圣黑曜石的形态",
+  "key.sacredobsidian.reverse": "反向延伸（按住）",
+  "key.categories.sacredobsidian": "神圣黑曜石",
+  "message.sacred_obsidian.switch_to_second": "已切换到第二形态",
+  "message.sacred_obsidian.switch_to_first": "已切换到第一形态"
+}

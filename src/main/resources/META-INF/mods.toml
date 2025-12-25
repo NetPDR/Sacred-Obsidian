@@ -1,0 +1,30 @@
+modLoader = "javafml"
+loaderVersion = "[47,)"
+
+license = "MIT"
+
+[[mods]]
+modId = "sacredobsidian"
+version = "1.0.0"
+displayName = "Sacred Obsidian"
+authors = "Net_PDR"
+description = '''
+A mod that makes players to use Herobrine's obsidian from Minecraft Animation AnnoyingVillager
+'''
+mixinConfigs = ["sacredobsidian.mixins.json"]
+
+# Forge dependency
+[[dependencies.sacredobsidian]]
+modId = "forge"
+mandatory = true
+versionRange = "[47,)"
+ordering = "NONE"
+side = "BOTH"
+
+# Minecraft dependency
+[[dependencies.sacredobsidian]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.20.1]"
+ordering = "NONE"
+side = "BOTH"
