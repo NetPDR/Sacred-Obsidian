@@ -4,14 +4,13 @@ import com.netpdr.sacredobsidian.registry.ModEnchantments;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.*;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.common.TierSortingRegistry;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
@@ -21,10 +20,10 @@ import java.util.Map;
 
 import static com.netpdr.sacredobsidian.weapon.SacredObsidianItem.*;
 
-public abstract  class BaseItem extends Item{
+public abstract  class BaseItem extends TieredItem {
 
-    public BaseItem(Properties props){
-        super(props);
+    public BaseItem(Tier tier, Properties props){
+        super(tier, props);
     }
 
     @Override
@@ -68,7 +67,10 @@ public abstract  class BaseItem extends Item{
 
     @Override
     public boolean isCorrectToolForDrops(BlockState state) {
-        return state.is(BlockTags.MINEABLE_WITH_PICKAXE);
+        return state.is(BlockTags.MINEABLE_WITH_PICKAXE)
+                && TierSortingRegistry.isCorrectTierForDrops(
+                getTier(), state
+        );
     }
 
     /** 允许在附魔台中附魔 Allow enchanting in the Enchanting Station */
@@ -77,10 +79,6 @@ public abstract  class BaseItem extends Item{
         return true;
     }
 
-    /**
-     * @deprecated Mojang 标记为 deprecated，但1.20.1里这是唯一能控制附魔强度的方法。 // Mojang is marked as deprecated, but in 1.20.1, this is the only method that can control the strength of enchantments.
-     */
-    @SuppressWarnings("deprecation")
     @Override
     public int getEnchantmentValue() {
         return 15;
@@ -95,6 +93,11 @@ public abstract  class BaseItem extends Item{
                 || ench == Enchantments.FIRE_ASPECT
                 || ench == ModEnchantments.OBSIDIAN_REACH.get()
                 || ench == ModEnchantments.OBSIDIAN_POWER.get();
+    }
+
+    @Override
+    public boolean isBarVisible(@NotNull ItemStack stack) {
+        return false;
     }
 }
 

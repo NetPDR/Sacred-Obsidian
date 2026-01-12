@@ -3,6 +3,7 @@ package com.netpdr.sacredobsidian;
 import com.netpdr.sacredobsidian.client.reverse.ReverseKeyHandler;
 import com.netpdr.sacredobsidian.client.entity.ClientSpawnObsidianEffectPacket;
 import com.netpdr.sacredobsidian.network.ReverseModePacket;
+import com.netpdr.sacredobsidian.network.ToggleDamagePacket;
 import com.netpdr.sacredobsidian.registry.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.Registries;
@@ -73,6 +74,11 @@ public class Sacredobsidian {
                 ReverseModePacket::encode,
                 ReverseModePacket::decode,
                 ReverseModePacket::handle);
+
+        CHANNEL.registerMessage(id++, ToggleDamagePacket.class,
+                ToggleDamagePacket::encode,
+                ToggleDamagePacket::decode,
+                ToggleDamagePacket::handle);
     }
 
     public Sacredobsidian() {

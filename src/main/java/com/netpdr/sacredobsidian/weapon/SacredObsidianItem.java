@@ -2,7 +2,6 @@ package com.netpdr.sacredobsidian.weapon;
 
 import com.netpdr.sacredobsidian.Sacredobsidian;
 import com.netpdr.sacredobsidian.blockentity.SacredObsidianBlockEntity;
-import com.netpdr.sacredobsidian.client.entity.ClientSpawnObsidianEffectPacket;
 import com.netpdr.sacredobsidian.data.SacredObsidianData;
 import com.netpdr.sacredobsidian.registry.ModEffects;
 import com.netpdr.sacredobsidian.registry.ModEnchantments;
@@ -25,8 +24,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Tiers;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -65,7 +66,7 @@ public class SacredObsidianItem extends BaseItem {
     public static final int COOLDOWN_TIME = 30; // 冷却（tick） // Cooldown (tick)
     public static final int OBSIDIAN_LIFETIME = 60; // 黑曜石存活时间（tick） // Obsidian survival time (tick)
 
-    // NBT keys （为了在 ItemStack 的 NBT 中存储状态）
+    // NBT keys （为了在 ItemStack 的 NBT 中存储状态） // NBT keys (used to store state in an ItemStack's NBT)
     private static final String TAG_SECOND_FORM = "SecondForm"; // 是否为第二形态 // Is it the second form?
     private static final String TAG_IS_EXTENDING = "IsExtending"; // 第二形态是否处于延伸中 // Is the second form in the process of extending?
     private static final String TAG_EXTEND_BLOCKS = "ExtendBlocks"; // 已延伸方块计数 // Extended block count
@@ -79,9 +80,10 @@ public class SacredObsidianItem extends BaseItem {
     private static final String TAG_REVERSE = "ReverseMode"; // 反向延伸开关（由客户端按键包写入） // Reverse extension switch (written by the client key packet)
     private static final String TAG_LAST_USE = "LastUseTime"; // 最近使用时间用于冷却 // Recent usage time for cooling
     private static final String TAG_COOLDOWN_TICKS = "CooldownTicks"; // 可视化冷却计数（未严格必要） // Visualized cooling count (not strictly necessary)
+    public static final String TAG_DAMAGE_ENABLED = "DamageEnabled"; // 热键控制的伤害开关，默认视为 true（若无键）
 
     public SacredObsidianItem(Properties properties) {
-        super(properties.stacksTo(1)); // 物品最大堆叠为 1 // The maximum stack size for this item is 1
+        super(Tiers.NETHERITE, properties.stacksTo(1)); // 物品最大堆叠为 1 // The maximum stack size for this item is 1
     }
 
     @Override
@@ -297,6 +299,8 @@ public class SacredObsidianItem extends BaseItem {
      * 从玩家到目标点之间沿直线放置黑曜石，并对命中的实体造成伤害。 Place obsidian in a straight line from the player to the target point, dealing damage to any entity hit.
      */
     private void extendObsidianPathAndDamage(Level world, Player player, BlockPos targetPos, ItemStack stack, int maxDistance) {
+        CompoundTag tag = stack.getOrCreateTag();
+        boolean damageEnabled = !tag.contains(TAG_DAMAGE_ENABLED) || tag.getBoolean(TAG_DAMAGE_ENABLED);
         Map<Enchantment, Integer> enchMap = EnchantmentHelper.getEnchantments(stack); // 取附魔 // Get enchantment
         int powerLevel = enchMap.getOrDefault(ModEnchantments.OBSIDIAN_POWER.get(), 0); // 读取强力等级 // Read power level
         float damagePerHit = OBSIDIAN_DAMAGE + powerLevel * 5.0F; // 计算伤害 // Calculate damage
@@ -350,9 +354,35 @@ public class SacredObsidianItem extends BaseItem {
 
             LivingEntity target = findTargetEntityAtPosition(world, pos, player); // 检测命中实体 // Detect hit entity
             if (target != null) {
-                DamageSource dmgSrc = world.damageSources().playerAttack(player);
-                target.hurt(dmgSrc, damagePerHit);
-                target.addEffect(new MobEffectInstance(ModEffects.IRRECONCILABLE_CRACK.get(), 100, 0));
+                if (damageEnabled) {
+                    DamageSource dmgSrc = world.damageSources().playerAttack(player);
+                    target.hurt(dmgSrc, damagePerHit);
+                    target.addEffect(new MobEffectInstance(ModEffects.IRRECONCILABLE_CRACK.get(), 100, 0));
+
+                    // ======= 处理原版击退附魔 =======
+                    int kbLevel = EnchantmentHelper.getTagEnchantmentLevel(Enchantments.KNOCKBACK, stack);
+                    if (kbLevel > 0) {
+                        // 这里按等级给予线性增加的击退强度（可调整系数） // Here, the knockback strength increases linearly with the level (adjustable coefficient).
+                        float kbStrength = 0.5F * kbLevel; // 每一级给予 0.5 的基础强度 // Provides 0.5 base strength per level
+                        double dx = player.getX() - target.getX();
+                        double dz = player.getZ() - target.getZ();
+                        target.knockback(kbStrength, dx, dz);
+                    }
+
+                    // ======= 处理火焰附加（但视觉为灵魂火） =======
+                    int faLevel = EnchantmentHelper.getTagEnchantmentLevel(Enchantments.FIRE_ASPECT, stack);
+                    if (faLevel > 0) {
+                        int seconds = 4 * faLevel; // 每级 4 秒（与原版近似） // 4 seconds per level (similar to the original version)
+                        target.setSecondsOnFire(seconds);
+
+                        if (world instanceof ServerLevel server) {
+                            server.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
+                                    target.getX(), target.getY() + (target.getBbHeight() / 2.0), target.getZ(),
+                                    10, 0.3, 0.5, 0.3, 0.01);
+                        }
+                        world.playSound(null, target.blockPosition(), SoundEvents.SOUL_ESCAPE, SoundSource.PLAYERS, 0.7F, 1.0F);
+                    }
+                }
                 break; // 命中则停止延伸 // Stop extending upon hit
             }
 
@@ -457,15 +487,41 @@ public class SacredObsidianItem extends BaseItem {
         }
 
         LivingEntity target = findTargetEntityAtPosition(world, pos, player);
-        if (target != null) {
-            Map<Enchantment,Integer> enchMap = EnchantmentHelper.getEnchantments(stack);
+
+        // 伤害开关，默认（未写入 NBT 时）视为开启
+        boolean damageEnabled = !tag.contains(TAG_DAMAGE_ENABLED) || tag.getBoolean(TAG_DAMAGE_ENABLED);
+
+        if (target != null && damageEnabled) {
+            // 命中并且允许伤害 -> 造成伤害并结束延伸（原行为）
+            Map<Enchantment, Integer> enchMap = EnchantmentHelper.getEnchantments(stack);
             int powerLevel = enchMap.getOrDefault(ModEnchantments.OBSIDIAN_POWER.get(), 0);
             float damage = OBSIDIAN_DAMAGE + powerLevel * 5.0F;
 
             DamageSource src = world.damageSources().playerAttack(player);
             target.hurt(src, damage);
-
             target.addEffect(new MobEffectInstance(ModEffects.IRRECONCILABLE_CRACK.get(), 100, 0));
+
+            // ======= 击退处理 =======
+            int kbLevel = EnchantmentHelper.getTagEnchantmentLevel(Enchantments.KNOCKBACK, stack);
+            if (kbLevel > 0) {
+                float kbStrength = 0.5F * kbLevel;
+                double dx = player.getX() - target.getX();
+                double dz = player.getZ() - target.getZ();
+                target.knockback(kbStrength, dx, dz);
+            }
+
+            // ======= 火焰附加 -> 灵魂火表现 =======
+            int faLevel = EnchantmentHelper.getTagEnchantmentLevel(Enchantments.FIRE_ASPECT, stack);
+            if (faLevel > 0) {
+                int seconds = 4 * faLevel;
+                target.setSecondsOnFire(seconds);
+                if (world instanceof ServerLevel server) {
+                    server.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
+                            target.getX(), target.getY() + (target.getBbHeight() / 2.0), target.getZ(),
+                            10, 0.3, 0.5, 0.3, 0.01);
+                }
+                world.playSound(null, target.blockPosition(), SoundEvents.SOUL_ESCAPE, SoundSource.PLAYERS, 0.7F, 1.0F);
+            }
 
             world.playSound(null, pos, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.0F, 1.0F);
             tag.putBoolean(TAG_IS_EXTENDING, false);
@@ -520,17 +576,25 @@ public class SacredObsidianItem extends BaseItem {
                     world.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
                     world.playSound(null, pos, SoundEvents.STONE_BREAK, SoundSource.BLOCKS, 1.0F, 1.0F);
 
+                    // 取出 owner UUID 并广播新版 packet（包含 owner UUID 与 ownerPos 快照） // Retrieve the owner UUID and broadcast the new version of the packet (including the owner UUID and ownerPos snapshot)
                     data.getOwner(pos).ifPresent(uuid -> {
-                        Player player = serverLevel.getPlayerByUUID(uuid);
-                        if (player != null && !world.isClientSide) {
-                            Vec3 start = new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-                            Vec3 target = player.position().add(0, 1.0, 0);
-
-                            Sacredobsidian.CHANNEL.send(
-                                    PacketDistributor.ALL.noArg(),
-                                    new ClientSpawnObsidianEffectPacket(start, target, true)
-                            );
+                        // 获取 owner 的位置快照，如果 owner 离线就用碎块原点 start 作为快照 // Get a location snapshot of the owner; if the owner is offline, use the chunk origin start as the snapshot.
+                        Vec3 start = new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+                        Vec3 ownerPosSnapshot = start;
+                        Player ownerPlayer = serverLevel.getPlayerByUUID(uuid);
+                        if (ownerPlayer != null) {
+                            ownerPosSnapshot = ownerPlayer.position().add(0, 1.0, 0);
                         }
+
+                        // 广播给所有客户端：客户端用 ownerUUID 与 ownerPosSnapshot 来驱动本地渲染 // Broadcast to all clients: The client uses ownerUUID and ownerPosSnapshot to drive local rendering.
+                        Sacredobsidian.CHANNEL.send(
+                                PacketDistributor.ALL.noArg(),
+                                new com.netpdr.sacredobsidian.client.entity.ClientSpawnObsidianEffectPacket(
+                                        start,
+                                        uuid,
+                                        ownerPosSnapshot
+                                )
+                        );
                     });
 
                     notifyClientForParticles(world, pos);

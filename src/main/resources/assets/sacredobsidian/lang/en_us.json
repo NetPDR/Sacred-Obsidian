@@ -15,7 +15,10 @@
   "advancement.sacredobsidian.switch_form.title": "Switch Form",
   "advancement.sacredobsidian.switch_form.description": "Successfully switched the form of the sacred obsidian",
   "key.sacredobsidian.reverse": "Reverse Obsidian Direction (hold)",
+  "key.sacredobsidian.toggle_damage": "Toggle Sacred Obsidian damage",
   "key.categories.sacredobsidian": "Sacred Obsidian",
+  "message.sacred_obsidian.damage_on": "Obsidian damage: ON",
+  "message.sacred_obsidian.damage_off": "Obsidian damage: OFF",
   "message.sacred_obsidian.switch_to_second": "Switched to Second Form",
   "message.sacred_obsidian.switch_to_first": "Switched to First Form"
 }
