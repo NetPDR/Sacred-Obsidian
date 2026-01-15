@@ -40,6 +40,6 @@ public class ObsidianReachEnchantment extends Enchantment {
 
     @Override
     public boolean isAllowedOnBooks() {
-        return true;
+        return super.isAllowedOnBooks();
     }
 }

@@ -143,7 +143,7 @@ public class SacredObsidianItem extends BaseItem {
 
                 world.playSound(null, player.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.0F, 1.0F); // 播放声效 // Play sound effect
 
-                BlockHitResult hitResult = rayTrace(world, player, maxDistance); // 射线检测目标 // Raycasting target
+                BlockHitResult hitResult = rayTrace(world, player, maxDistance); // 射线检测目标 // Ray casting target
                 BlockPos hitPos = hitResult.getBlockPos(); // 命中方块位置 // Hit block position
 
                 extendObsidianPathAndDamage(world, player, hitPos, itemStack, maxDistance); // 执行一次性延伸并检测伤害 // Perform a one-time extension and detect damage

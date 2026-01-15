@@ -51,6 +51,8 @@ public class Sacredobsidian {
     public static final RegistryObject<CreativeModeTab> NETPDR_CREATIVE_MODE_TAB = CREATIVE_MODE_TABS.register("netpdr_creative_mode_tab", () -> CreativeModeTab.builder().withTabsBefore(CreativeModeTabs.COMBAT).icon(() -> ModItems.SACRED_OBSIDIAN.get().getDefaultInstance()).displayItems((parameters, output) -> {
                 //Sacred_Obsidian
                 output.accept(ModItems.SACRED_OBSIDIAN.get());
+                output.accept(ModItems.ANCIENT_TOME_OBSIDIAN_POWER.get());
+                output.accept(ModItems.ANCIENT_TOME_OBSIDIAN_REACH.get());
             })
             .title(Component.translatable("itemGroup.netpdr_creative_mode_tab"))
             .build());

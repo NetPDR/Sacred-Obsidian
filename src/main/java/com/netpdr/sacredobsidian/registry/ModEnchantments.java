@@ -15,19 +15,19 @@ public class ModEnchantments {
     public static final DeferredRegister<Enchantment> ENCHANTMENTS =
             DeferredRegister.create(ForgeRegistries.ENCHANTMENTS, Sacredobsidian.MODID);
 
-    public static final RegistryObject<Enchantment> OBSIDIAN_REACH =
-            ENCHANTMENTS.register("obsidian_reach",
-                    () -> new ObsidianReachEnchantment(
-                            Enchantment.Rarity.UNCOMMON,
+    public static final RegistryObject<Enchantment> OBSIDIAN_POWER =
+            ENCHANTMENTS.register("obsidian_power",
+                    () -> new ObsidianPowerEnchantment(
+                            Enchantment.Rarity.RARE,
                             EnchantmentCategory.BREAKABLE,
                             EquipmentSlot.MAINHAND
                     )
             );
 
-    public static final RegistryObject<Enchantment> OBSIDIAN_POWER =
-            ENCHANTMENTS.register("obsidian_power",
-                    () -> new ObsidianPowerEnchantment(
-                            Enchantment.Rarity.RARE,
+    public static final RegistryObject<Enchantment> OBSIDIAN_REACH =
+            ENCHANTMENTS.register("obsidian_reach",
+                    () -> new ObsidianReachEnchantment(
+                            Enchantment.Rarity.UNCOMMON,
                             EnchantmentCategory.BREAKABLE,
                             EquipmentSlot.MAINHAND
                     )

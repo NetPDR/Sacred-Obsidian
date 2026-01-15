@@ -1,12 +1,8 @@
 {
-  "required":false,
-  "minVersion": "0.8",
-  "compatibilityLevel": "JAVA_17",
+  "required": false,
   "package": "com.netpdr.sacredobsidian.mixin",
-  "refmap": "sacredobsidian.refmap.json",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [],
   "client": [],
-  "injectors": {
-    "defaultRequire": 1
-  },
-  "mixins": []
+  "server": []
 }

@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "#": {
+      "item": "minecraft:lapis_lazuli"
+    },
+    "$": {
+      "item": "minecraft:book"
+    },
+    "%": {
+      "item": "minecraft:nether_star"
+    },
+    "^": {
+      "item": "minecraft:obsidian"
+    }
+  },
+  "pattern": [
+    "#$#",
+    "^%^",
+    "#^#"
+  ],
+  "result": {
+    "item": "sacredobsidian:ancient_tome_obsidian_reach"
+  },
+  "show_notification": true
+}

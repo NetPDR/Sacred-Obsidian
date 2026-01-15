@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "sacredobsidian:item/ancient_tome_obsidian_reach"
+  }
+}
