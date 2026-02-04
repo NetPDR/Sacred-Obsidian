@@ -4,6 +4,7 @@
   "package": "com.netpdr.sacredobsidian.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "LivingEntityGlowingMixin"
   ],
   "client": [
   ],

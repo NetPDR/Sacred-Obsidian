@@ -18,7 +18,7 @@ public abstract class BaseEffect extends MobEffect {
 
     @Override
     public boolean isInstantenous() {
-        return instant;
+        return false;
     }
 
     /* ================= 持续效果 Tick 判定 ================= */
@@ -30,7 +30,7 @@ public abstract class BaseEffect extends MobEffect {
     }
 
     protected boolean canApplyEffect(int remainingTicks, int amplifier) {
-        return false;
+        return true;
     }
 
     /* ================= Tick 生效 ================= */
