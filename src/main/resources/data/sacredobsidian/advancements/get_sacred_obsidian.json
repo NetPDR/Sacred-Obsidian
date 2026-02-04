@@ -1,0 +1,39 @@
+{
+  "parent": "sacredobsidian:sacredobsidian_root",
+
+  "display": {
+    "icon": {
+      "item": "sacredobsidian:sacred_obsidian"
+    },
+    "title": {
+      "translate": "advancement.sacredobsidian.get_sacred_obsidian.title"
+    },
+    "description": {
+      "translate": "advancement.sacredobsidian.get_sacred_obsidian.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+
+  "criteria": {
+    "got_obsidian": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": ["sacredobsidian:sacred_obsidian"],
+            "count": {
+              "min": 1
+            }
+          }
+        ]
+      }
+    }
+  },
+
+  "requirements": [
+    [ "got_obsidian" ]
+  ]
+}
