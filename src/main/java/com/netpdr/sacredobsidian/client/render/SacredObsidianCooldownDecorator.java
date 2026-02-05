@@ -71,7 +71,6 @@ public class SacredObsidianCooldownDecorator implements IItemDecorator {
 
         RenderSystem.disableBlend();
 
-        // 返回 true：告诉 handler 我改过状态，它会 reset
         return true;
     }
 }

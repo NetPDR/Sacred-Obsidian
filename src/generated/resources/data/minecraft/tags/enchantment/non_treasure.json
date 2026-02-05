@@ -1,0 +1,12 @@
+{
+  "values": [
+    {
+      "id": "sacredobsidian:obsidian_power",
+      "required": false
+    },
+    {
+      "id": "sacredobsidian:obsidian_reach",
+      "required": false
+    }
+  ]
+}

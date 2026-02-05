@@ -16,10 +16,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
-/**
- * Ancient Tome item bound to a specific enchantment.
- * NeoForge 1.21.x / datapack-enchantment safe implementation.
- */
 public class AncientTomeItem extends Item {
 
     private final ResourceKey<Enchantment> targetEnchantment;

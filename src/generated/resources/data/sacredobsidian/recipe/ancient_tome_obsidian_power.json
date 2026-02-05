@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "#": {
+      "item": "minecraft:lapis_lazuli"
+    },
+    "$": {
+      "item": "minecraft:book"
+    },
+    "%": {
+      "item": "minecraft:nether_star"
+    },
+    "^": {
+      "item": "minecraft:potion"
+    }
+  },
+  "pattern": [
+    "#$#",
+    "^%^",
+    "#^#"
+  ],
+  "result": {
+    "count": 1,
+    "id": "sacredobsidian:ancient_tome_obsidian_power"
+  }
+}

@@ -34,26 +34,18 @@ public class Sacredobsidian {
     public static final String MODID = "sacredobsidian";
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    // 注意：不要在主类重复创建 ITEMS / BLOCKS / CREATIVE_MODE_TABS 等 DeferredRegister。
-    // 这些都放在对应的 registry 类中，例如 ModItems, ModBlockEntities, ModTabs, ModEffects。
-
     public Sacredobsidian(IEventBus modEventBus, ModContainer modContainer) {
-        // 常规监听
         modEventBus.addListener(this::commonSetup);
 
-        // 把所有 DeferredRegister 统一在这里注册一次（每个 register 只在此调用一次）
         ModItems.ITEMS.register(modEventBus);
         ModBlockEntities.BLOCK_ENTITY_TYPES.register(modEventBus);
         ModEffects.EFFECTS.register(modEventBus);
         ModTabs.CREATIVE_MODE_TABS.register(modEventBus);
 
-        // data components / datapacks / helper register
         SacredObsidianDataComponents.DATA_COMPONENTS.register(modEventBus);
 
-        // payload handlers 注册（静态方法）
         modEventBus.addListener(Sacredobsidian::registerPayloads);
 
-        // config
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
         NeoForge.EVENT_BUS.register(this);

@@ -1,0 +1,26 @@
+{
+  "parent": "sacredobsidian:get_sacred_obsidian",
+  "criteria": {
+    "switch_form": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancement.sacredobsidian.switch_form.description"
+    },
+    "icon": {
+      "count": 1,
+      "id": "sacredobsidian:sacred_obsidian"
+    },
+    "title": {
+      "translate": "advancement.sacredobsidian.switch_form.title"
+    }
+  },
+  "requirements": [
+    [
+      "switch_form"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

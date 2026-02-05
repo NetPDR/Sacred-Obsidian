@@ -8,13 +8,6 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-/**
- * Sacred Obsidian Item DataComponents
- * 设计原则：
- * - ItemStack 状态唯一来源（无 NBT）
- * - 所有字段 persistent（支持存档）
- * - Vec3 原子化（不拆 XYZ）
- */
 public class SacredObsidianDataComponents {
 
     public static final DeferredRegister<DataComponentType<?>> DATA_COMPONENTS =

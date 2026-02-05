@@ -23,7 +23,6 @@ public class ToggleKeyHandler {
 
         boolean down = ToggleKeyRegistrar.TOGGLE_DAMAGE_KEY.isDown();
 
-        // 只在「按下瞬间」触发
         if (!(down && !prevDown)) {
             prevDown = down;
             return;

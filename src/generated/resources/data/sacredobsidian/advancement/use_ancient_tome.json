@@ -1,0 +1,26 @@
+{
+  "parent": "sacredobsidian:get_sacred_obsidian",
+  "criteria": {
+    "used_ancient_tome": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "display": {
+    "description": {
+      "translate": "advancement.sacredobsidian.use_ancient_tome.description"
+    },
+    "icon": {
+      "count": 1,
+      "id": "sacredobsidian:ancient_tome_obsidian_power"
+    },
+    "title": {
+      "translate": "advancement.sacredobsidian.use_ancient_tome.title"
+    }
+  },
+  "requirements": [
+    [
+      "used_ancient_tome"
+    ]
+  ],
+  "sends_telemetry_event": true
+}

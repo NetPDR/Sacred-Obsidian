@@ -24,19 +24,15 @@ public final class ModEffects {
     public static final DeferredRegister<MobEffect> EFFECTS =
             DeferredRegister.create(Registries.MOB_EFFECT, Sacredobsidian.MODID);
 
-    // DeferredHolder —— 正确匹配 DeferredRegister.register 的返回
     public static final DeferredHolder<MobEffect, MobEffect> IRRECONCILABLE_CRACK =
             EFFECTS.register("irreconcilable_crack", () -> {
-                // 返回具体的效果实例（不要返回 Holder）
+
                 MobEffect effect = new EffectIrreconcilableCrack(MobEffectCategory.HARMFUL, 0x000033, false);
 
-                // 使用具体的 Attribute（Attributes.MOVEMENT_SPEED），不要把 Holder 强转为 Attribute
                 ResourceLocation modifierId = ResourceLocation.fromNamespaceAndPath(Sacredobsidian.MODID, "irreconcilable_crack");
 
-                // 在 MobEffect 上注册一个 attribute modifier（API 接口接受 Attribute / ResourceLocation / UUID 形式）
-                // 这里用 AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL 与你原先一致
                 effect.addAttributeModifier(
-                        Attributes.MOVEMENT_SPEED, // 直接使用 Attribute 实例
+                        Attributes.MOVEMENT_SPEED,
                         modifierId,
                         -0.25D,
                         AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL

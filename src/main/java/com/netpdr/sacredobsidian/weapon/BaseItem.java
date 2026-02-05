@@ -142,15 +142,6 @@ public abstract  class BaseItem extends TieredItem {
         // 3) 最后兜底：如果上面都找不到，返回 0（附魔不存在 / 未注册 / stack 上没有）
         return 0;
     }
-    @SuppressWarnings("unused")
-    public int getKnockbackLevel(@NotNull ItemStack stack, @Nullable Level level) {
-        return getEnchantmentLevel(stack, level, "minecraft:knockback");
-    }
-
-    @SuppressWarnings("unused")
-    public int getFireAspectLevel(@NotNull ItemStack stack, @Nullable Level level) {
-        return getEnchantmentLevel(stack, level, "minecraft:fire_aspect");
-    }
 }
 
 
