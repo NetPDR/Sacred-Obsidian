@@ -1,0 +1,36 @@
+{
+  "anvil_cost": 1,
+  "description": {
+    "translate": "enchantment.sacredobsidian.obsidian_enhanced"
+  },
+  "effects": {
+    "minecraft:attributes": [
+      {
+        "amount": {
+          "type": "minecraft:levels_squared",
+          "added": 1.0
+        },
+        "attribute": "minecraft:player.mining_efficiency",
+        "id": "sacredobsidian:enchantment.obsidian_enhanced",
+        "operation": "add_value"
+      }
+    ]
+  },
+  "max_cost": {
+    "base": 51,
+    "per_level_above_first": 10
+  },
+  "max_level": 5,
+  "min_cost": {
+    "base": 1,
+    "per_level_above_first": 10
+  },
+  "primary_items": [
+    "sacredobsidian:sacred_obsidian"
+  ],
+  "slots": [
+    "mainhand"
+  ],
+  "supported_items": "sacredobsidian:sacred_obsidian",
+  "weight": 10
+}

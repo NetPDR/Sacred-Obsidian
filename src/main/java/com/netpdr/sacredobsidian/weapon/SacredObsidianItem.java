@@ -509,7 +509,7 @@ public class SacredObsidianItem extends BaseItem {
                     target.addEffect(new MobEffectInstance(effectHolder, 100, 0));
 
                     // ======= 处理原版击退附魔 =======
-                    int kbLevel = getEnchantmentLevel(stack, world, "minecraft:knockback");
+                    int kbLevel = getEnchantmentLevel(stack, world, Sacredobsidian.MODID + ":obsidian_enhanced");
                     if (kbLevel > 0) {
                         float kbStrength = 0.5F * kbLevel;
                         double dx = player.getX() - target.getX();
@@ -518,7 +518,7 @@ public class SacredObsidianItem extends BaseItem {
                     }
 
                     // ======= 处理火焰附加（但视觉为灵魂火） =======
-                    int faLevel = getEnchantmentLevel(stack, world, "minecraft:fire_aspect");
+                    int faLevel = getEnchantmentLevel(stack, world, Sacredobsidian.MODID + ":obsidian_enhanced");
                     if (faLevel > 0) {
                         int fireTicks = 4 * faLevel * 20;
 
@@ -695,7 +695,7 @@ public class SacredObsidianItem extends BaseItem {
 
             /* ======= 击退处理 ======= */
 
-            int kbLevel = getEnchantmentLevel(stack, world, "minecraft:knockback");
+            int kbLevel = getEnchantmentLevel(stack, world, Sacredobsidian.MODID + ":obsidian_enhanced");
             if (kbLevel > 0) {
                 float kbStrength = 0.5F * kbLevel;
                 double dx = player.getX() - target.getX();
@@ -705,7 +705,7 @@ public class SacredObsidianItem extends BaseItem {
 
             /* ======= 火焰附加（灵魂火表现） ======= */
 
-            int faLevel = getEnchantmentLevel(stack, world, "minecraft:fire_aspect");
+            int faLevel = getEnchantmentLevel(stack, world, Sacredobsidian.MODID + ":obsidian_enhanced");
             if (faLevel > 0) {
                 int fireTicks = 4 * faLevel * 20;
 

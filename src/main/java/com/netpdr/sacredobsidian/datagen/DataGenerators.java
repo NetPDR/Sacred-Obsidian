@@ -58,6 +58,12 @@ public class DataGenerators {
                     true,
                     new ModEnchantmentTagProvider(output, lookup)
             );
+
+            /* Enchantment effects */
+            generator.addProvider(
+                    true,
+                    new ModEnchantmentEffectProvider(output)
+            );
         }
     }
 }

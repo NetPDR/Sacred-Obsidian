@@ -7,6 +7,10 @@
     {
       "id": "sacredobsidian:obsidian_reach",
       "required": false
+    },
+    {
+      "id": "sacredobsidian:obsidian_enhanced",
+      "required": false
     }
   ]
 }

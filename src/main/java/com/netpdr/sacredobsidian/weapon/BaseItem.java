@@ -63,9 +63,11 @@ public abstract  class BaseItem extends TieredItem {
 
     @Override
     public float getDestroySpeed(@NotNull ItemStack stack, BlockState state) {
-        // 采掘速度 // mining speed
-        float netheriteEfficiency = 25.0F;
-        return state.is(BlockTags.MINEABLE_WITH_PICKAXE) ? netheriteEfficiency : super.getDestroySpeed(stack, state);
+        if (state.is(BlockTags.MINEABLE_WITH_PICKAXE)) {
+            // 用 super 作为基础，再人为抬高
+            return super.getDestroySpeed(stack, state) * (25.0F / getTier().getSpeed());
+        }
+        return super.getDestroySpeed(stack, state);
     }
 
     @Override
