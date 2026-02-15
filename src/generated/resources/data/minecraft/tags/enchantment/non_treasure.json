@@ -11,6 +11,10 @@
     {
       "id": "sacredobsidian:obsidian_enhanced",
       "required": false
+    },
+    {
+      "id": "sacredobsidian:armor_shredder",
+      "required": false
     }
   ]
 }

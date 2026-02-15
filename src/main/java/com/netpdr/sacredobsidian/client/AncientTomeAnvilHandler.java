@@ -47,7 +47,7 @@ public class AncientTomeAnvilHandler {
         if (!(right.getItem() instanceof AncientTomeItem tome)) return;
         event.getPlayer();
 
-        /* ✅ 直接拿 ResourceKey */
+        /* 直接拿 ResourceKey */
         ResourceKey<Enchantment> enchantKey =
                 tome.getTargetEnchantmentKey();
         if (enchantKey == null) return;

@@ -38,6 +38,8 @@ public class ClientObsidianManager {
         public final UUID ownerUUID;
         public Vec3 lastKnownTarget;
 
+        public boolean soundPlayed = false;
+
         public ObsidianEntry(Vec3 start, UUID ownerUUID, Vec3 initialTarget) {
             this.prevPos = start;
             this.currentPos = start;
@@ -75,6 +77,9 @@ public class ClientObsidianManager {
 
     private void onClientTick() {
         Minecraft mc = Minecraft.getInstance();
+
+        if (mc.isPaused()) return;
+
         if (mc.level == null) return;
 
         LocalPlayer localPlayer = mc.player; // 可能为 null // May be null
@@ -105,25 +110,31 @@ public class ClientObsidianManager {
                 if (localPlayer.getUUID().equals(e.ownerUUID)) {
                     double distToOwner = e.currentPos.distanceTo(localPlayer.position().add(0, 1.0, 0));
                     reached = distToOwner < 0.5;
-                    if (reached) {
-                        localPlayer.getCommandSenderWorld().playSound(
-                                localPlayer, localPlayer.getX(), localPlayer.getY(), localPlayer.getZ(),
-                                net.minecraft.sounds.SoundEvents.ITEM_PICKUP,
-                                net.minecraft.sounds.SoundSource.PLAYERS,
-                                0.2F, 1.0F
-                        );
-                    }
                 } else {
-                    // 如果本地不是 owner，则使用本地到 lastKnownTarget 的距离来触发移除（视觉上够接近就移除） // If the local is not the owner, use the distance from the local to the lastKnownTarget to trigger removal (visually, remove it when it is close enough)
-                    double distToTarget = e.currentPos.distanceTo(e.lastKnownTarget);
-                    reached = distToTarget < 0.5;
+                    reached = e.currentPos.distanceTo(e.lastKnownTarget) < 0.5;
                 }
             } else {
-                // 本地 player 未加载，依据目标距离判断 // Local player not loaded, determined based on target distance
                 reached = e.currentPos.distanceTo(e.lastKnownTarget) < 0.5;
             }
 
             boolean tooFar = e.currentPos.distanceTo(e.lastKnownTarget) > 128.0;
+
+            if (reached && !e.soundPlayed) {
+                e.soundPlayed = true;
+
+                if (localPlayer != null) {
+                    localPlayer.getCommandSenderWorld().playSound(
+                            localPlayer,
+                            e.currentPos.x,
+                            e.currentPos.y,
+                            e.currentPos.z,
+                            net.minecraft.sounds.SoundEvents.ITEM_PICKUP,
+                            net.minecraft.sounds.SoundSource.PLAYERS,
+                            0.2F,
+                            1.0F
+                    );
+                }
+            }
 
             if (reached || tooFar) {
                 it.remove();

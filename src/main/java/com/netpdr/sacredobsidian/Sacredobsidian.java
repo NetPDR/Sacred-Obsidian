@@ -5,10 +5,12 @@ import com.netpdr.sacredobsidian.client.entity.ClientSpawnObsidianEffectPacket;
 import com.netpdr.sacredobsidian.data.SacredObsidianDataComponents;
 import com.netpdr.sacredobsidian.network.ReverseModePayload;
 import com.netpdr.sacredobsidian.network.ToggleDamagePayload;
+import com.netpdr.sacredobsidian.network.VanillaInteractPayload;
 import com.netpdr.sacredobsidian.registry.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.api.distmarker.Dist;
@@ -73,11 +75,22 @@ public class Sacredobsidian {
                                     }
                                 })
                 )
+                .playToServer(
+                        VanillaInteractPayload.TYPE,
+                        VanillaInteractPayload.CODEC,
+                        (payload, context) ->
+                                context.enqueueWork(() -> {
+                                    if (context.player() instanceof ServerPlayer sp) {
+                                        VanillaInteractPayload.handle(payload, sp);
+                                    }
+                                })
+                )
                 .playToClient(
                         ClientSpawnObsidianEffectPacket.TYPE,
                         ClientSpawnObsidianEffectPacket.CODEC,
                         ClientSpawnObsidianEffectPacket::handle
                 );
+
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {

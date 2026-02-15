@@ -35,7 +35,7 @@ public class PlayerDeathHandler {
             }
         }
 
-        // 使用 SacredObsidianData 的帮助方法一次性移除该玩家的 owner 记录 // Use the help method of SacredObsidianData to remove the owner record of the player in one go
+        // 使用 SacredObsidianData 的帮助方法一次性移除该玩`家的 owner 记录 // Use the help method of SacredObsidianData to remove the owner record of the player in one go
         if (player.getCommandSenderWorld() instanceof ServerLevel serverLevel) {
             SacredObsidianData data = SacredObsidianData.get(serverLevel);
             data.removeAllOwnersFor(player.getUUID());

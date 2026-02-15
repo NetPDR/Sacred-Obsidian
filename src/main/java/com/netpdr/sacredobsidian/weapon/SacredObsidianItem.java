@@ -20,15 +20,18 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Tiers;
+import net.minecraft.world.item.*;
+import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -67,16 +70,16 @@ public class SacredObsidianItem extends BaseItem {
     public static final int COOLDOWN_TIME = 30; // 冷却（tick） // Cooldown (tick)
     public static final int OBSIDIAN_LIFETIME = 60; // 黑曜石存活时间（tick） // Obsidian survival time (tick)
 
+    private static final float ARMOR_BYPASS_PERCENT = 0.3F; // 30% 固定穿甲
+
     public SacredObsidianItem(Properties properties) {
         super(Tiers.NETHERITE, properties.stacksTo(1)); // 物品最大堆叠为 1 // The maximum stack size for this item is 1
     }
 
-    @Override
-    public @NotNull InteractionResultHolder<ItemStack> use(
-            @NotNull Level world,
-            Player player,
-            @NotNull InteractionHand hand
+    public InteractionResultHolder<ItemStack> handleRightClick(
+            Level world, Player player, InteractionHand hand
     ) {
+
         // 获取玩家手中的 ItemStack
         // Get the ItemStack in the player's hand
         ItemStack itemStack = player.getItemInHand(hand);
@@ -226,11 +229,18 @@ public class SacredObsidianItem extends BaseItem {
 
                 int maxBlocks = BASE_MAX_DISTANCE + reachLevel * EXTRA_PER_LEVEL;
 
+                itemStack.remove(SacredObsidianDataComponents.SUB_STATE.get());
+
                 // 标记进入延伸状态
                 // Mark as extending
                 itemStack.set(
                         SacredObsidianDataComponents.IS_EXTENDING.get(),
                         true
+                );
+
+                itemStack.set(
+                        SacredObsidianDataComponents.SUB_STATE.get(),
+                        1 // LIFT
                 );
 
                 // 重置已延伸数量
@@ -273,15 +283,72 @@ public class SacredObsidianItem extends BaseItem {
             }
         }
 
-        return InteractionResultHolder.sidedSuccess(
-                itemStack, world.isClientSide()
-        );
+        return InteractionResultHolder.consume(itemStack);
+    }
+
+    @Override
+    public @NotNull InteractionResultHolder<ItemStack> use(
+            @NotNull Level world,
+            @NotNull Player player,
+            @NotNull InteractionHand hand
+    ) {
+        ItemStack stack = player.getItemInHand(hand);
+
+        // 原版交互授权中：完全放行，不执行黑曜石逻辑
+        if (stack.getOrDefault(
+                SacredObsidianDataComponents.VANILLA_INTERACTING.get(),
+                false
+        )) {
+            return InteractionResultHolder.pass(stack);
+        }
+
+        return handleRightClick(world, player, hand);
+    }
+
+    @Override
+    public @NotNull InteractionResult useOn(UseOnContext context) {
+        Player player = context.getPlayer();
+        if (player == null) return InteractionResult.PASS;
+
+        ItemStack stack = context.getItemInHand();
+
+        // 原版交互授权中：放行方块交互
+        if (stack.getOrDefault(
+                SacredObsidianDataComponents.VANILLA_INTERACTING.get(),
+                false
+        )) {
+            return InteractionResult.PASS;
+        }
+
+        handleRightClick(context.getLevel(), player, context.getHand());
+        return InteractionResult.CONSUME;
+    }
+
+    @Override
+    public @NotNull InteractionResult interactLivingEntity(
+            @NotNull ItemStack stack,
+            @NotNull Player player,
+            @NotNull LivingEntity target,
+            @NotNull InteractionHand hand
+    ) {
+        // 原版交互授权中：放行实体交互
+        if (stack.getOrDefault(
+                SacredObsidianDataComponents.VANILLA_INTERACTING.get(),
+                false
+        )) {
+            return InteractionResult.PASS;
+        }
+
+        handleRightClick(player.level(), player, hand);
+        return InteractionResult.CONSUME;
     }
 
     @Override
     public boolean onDroppedByPlayer(@NotNull ItemStack stack, @NotNull Player player) {
         // 停止延伸
         stack.set(SacredObsidianDataComponents.IS_EXTENDING.get(), false);
+
+        stack.remove(SacredObsidianDataComponents.SUB_STATE.get());
 
         // 关闭反向模式
         stack.remove(SacredObsidianDataComponents.REVERSE_MODE.get());
@@ -302,6 +369,7 @@ public class SacredObsidianItem extends BaseItem {
         // 只在服务端玩家上处理
         // Only process on server-side players
         if (!(entity instanceof Player player) || world.isClientSide) return;
+        if (!selected) return;
 
         /* =========================================================
          * 玩家死亡 / 旁观 / 实体移除 → 强制终止延伸
@@ -309,7 +377,29 @@ public class SacredObsidianItem extends BaseItem {
          * ========================================================= */
         if (!player.isAlive() || player.isSpectator() || player.isRemoved()) {
             stack.set(SacredObsidianDataComponents.IS_EXTENDING.get(), false);
+            stack.remove(SacredObsidianDataComponents.SUB_STATE.get());
             stack.remove(SacredObsidianDataComponents.REVERSE_MODE.get());
+            return;
+        }
+
+        boolean isExtending = stack.getOrDefault(
+                SacredObsidianDataComponents.IS_EXTENDING.get(),
+                false
+        );
+
+        if (!isExtending) {
+            stack.remove(SacredObsidianDataComponents.SUB_STATE.get());
+            stack.remove(SacredObsidianDataComponents.REVERSE_MODE.get());
+            return;
+        }
+
+        /* ================= 子状态 ================= */
+        int subState = stack.getOrDefault(
+                SacredObsidianDataComponents.SUB_STATE.get(), 0
+        );
+
+        if (subState == 1) { // LIFT
+            handleLift(world, player, stack);
             return;
         }
 
@@ -319,12 +409,8 @@ public class SacredObsidianItem extends BaseItem {
                 SacredObsidianDataComponents.SECOND_FORM.get(),
                 false
         );
-        boolean isExtending = stack.getOrDefault(
-                SacredObsidianDataComponents.IS_EXTENDING.get(),
-                false
-        );
 
-        if (!secondForm || !isExtending) return;
+        if (!secondForm) return;
 
         int blocks = stack.getOrDefault(
                 SacredObsidianDataComponents.EXTEND_BLOCKS.get(),
@@ -448,9 +534,6 @@ public class SacredObsidianItem extends BaseItem {
                 true
         );
 
-        int powerLevel = getEnchantmentLevel(stack, world, Sacredobsidian.MODID + ":obsidian_power"); // 读取强力等级 // Read power level
-        float damagePerHit = OBSIDIAN_DAMAGE + powerLevel * 5.0F; // 计算伤害 // Calculate damage
-
         // 使用 ThreadLocalRandom 替代 new Random()，避免频繁实例化 Random // Use ThreadLocalRandom instead of new Random() to avoid frequent instantiation of Random
         ThreadLocalRandom tlr = ThreadLocalRandom.current();
 
@@ -501,39 +584,7 @@ public class SacredObsidianItem extends BaseItem {
             LivingEntity target = findTargetEntityAtPosition(world, pos, player); // 检测命中实体 // Detect hit entity
             if (target != null) {
                 if (damageEnabled) {
-                    DamageSource dmgSrc = world.damageSources().playerAttack(player);
-                    target.hurt(dmgSrc, damagePerHit);
-
-                    ResourceKey<MobEffect> key = ResourceKey.create(Registries.MOB_EFFECT, ResourceLocation.parse("sacredobsidian:irreconcilable_crack"));
-                    Holder<MobEffect> effectHolder = world.registryAccess().registryOrThrow(Registries.MOB_EFFECT).getHolder(key).orElseThrow();
-                    target.addEffect(new MobEffectInstance(effectHolder, 100, 0));
-
-                    // ======= 处理原版击退附魔 =======
-                    int kbLevel = getEnchantmentLevel(stack, world, Sacredobsidian.MODID + ":obsidian_enhanced");
-                    if (kbLevel > 0) {
-                        float kbStrength = 0.5F * kbLevel;
-                        double dx = player.getX() - target.getX();
-                        double dz = player.getZ() - target.getZ();
-                        target.knockback(kbStrength, dx, dz);
-                    }
-
-                    // ======= 处理火焰附加（但视觉为灵魂火） =======
-                    int faLevel = getEnchantmentLevel(stack, world, Sacredobsidian.MODID + ":obsidian_enhanced");
-                    if (faLevel > 0) {
-                        int fireTicks = 4 * faLevel * 20;
-
-                        target.setRemainingFireTicks(
-                                Math.max(target.getRemainingFireTicks(), fireTicks)
-                        );
-
-                        if (world instanceof ServerLevel server) {
-                            server.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
-                                    target.getX(), target.getY() + (target.getBbHeight() / 2.0), target.getZ(),
-                                    10, 0.3, 0.5, 0.3, 0.01);
-                        }
-
-                        playSoundAt(world, target.getX(), target.getY(), target.getZ(), SoundEvents.SOUL_ESCAPE, SoundSource.PLAYERS, 0.7F, 1.0F);
-                    }
+                    applyObsidianDamage(world, player, target, stack);
                 }
                 break; // 命中则停止延伸 // Stop extending upon hit
             }
@@ -607,6 +658,95 @@ public class SacredObsidianItem extends BaseItem {
         return best;
     }
 
+    private void handleLift(Level world, Player player, ItemStack stack) {
+        // ===== 延伸额度检查 =====
+        int blocks = stack.getOrDefault(SacredObsidianDataComponents.EXTEND_BLOCKS.get(), 0);
+        int maxBlocks = stack.getOrDefault(SacredObsidianDataComponents.MAX_BLOCKS.get(), 0);
+
+        if (blocks >= maxBlocks) {
+            // 清理 fractional 标志并结束延伸
+            stack.remove(SacredObsidianDataComponents.FRACTIONAL_LIFTED.get());
+            stack.set(SacredObsidianDataComponents.IS_EXTENDING.get(), false);
+            stack.remove(SacredObsidianDataComponents.SUB_STATE.get());
+            return;
+        }
+
+        // ===== 视线必须明显朝下 =====
+        if (player.getLookAngle().y > -0.6) {
+            stack.set(SacredObsidianDataComponents.SUB_STATE.get(), 2);
+            return;
+        }
+
+        // ===== 脚下检测 =====
+        BlockPos groundPos = player.blockPosition().below();
+        BlockState groundState = world.getBlockState(groundPos);
+
+        if (groundState.isAir() || groundState.canBeReplaced()) {
+            stack.set(SacredObsidianDataComponents.SUB_STATE.get(), 2);
+            return;
+        }
+
+        // ===== 顶头检测 =====
+        BlockPos headPos = player.blockPosition().above();
+        if (HeadInspection(world, stack, headPos)) return;
+
+        // ===== 初始放置位置 =====
+        BlockPos placePos = player.blockPosition();
+
+        // ===== 判断是否处于小数高度 =====
+        double yFrac = player.getY() - Math.floor(player.getY());
+        boolean isFractionalHeight = yFrac > 1e-4;
+
+        // 读取是否已经做过“首块抬升”（会话内只允许一次）
+        boolean alreadyFractionalLifted = stack.getOrDefault(
+                SacredObsidianDataComponents.FRACTIONAL_LIFTED.get(), false
+        );
+
+        boolean needDoubleLiftThisTick = false;
+
+        if (isFractionalHeight && !groundState.canBeReplaced() && !alreadyFractionalLifted) {
+            placePos = placePos.above(); // 首块抬升一格
+            needDoubleLiftThisTick = true;
+            stack.set(SacredObsidianDataComponents.FRACTIONAL_LIFTED.get(), true);
+        }
+
+        // ===== 防止覆盖不可替代方块 =====
+        if (HeadInspection(world, stack, placePos)) return;
+
+        // ===== 玩家传送高度 =====
+        double liftHeight = needDoubleLiftThisTick ? 2.0 : 1.0;
+
+        player.teleportTo(
+                player.getX(),
+                player.getY() + liftHeight,
+                player.getZ()
+        );
+
+        player.fallDistance = 0;
+
+        // ===== 放置黑曜石 =====
+        placeObsidianAt(
+                world,
+                stack,
+                player,
+                placePos,
+                new Vec3(0.0, 1.0, 0.0)
+        );
+    }
+
+    private boolean HeadInspection(Level world, ItemStack stack, BlockPos headPos) {
+        BlockState headState = world.getBlockState(headPos);
+
+        if (!headState.isAir() && !headState.canBeReplaced()) {
+            // 清理 fractional 标志并结束延伸
+            stack.remove(SacredObsidianDataComponents.FRACTIONAL_LIFTED.get());
+            stack.set(SacredObsidianDataComponents.IS_EXTENDING.get(), false);
+            stack.remove(SacredObsidianDataComponents.SUB_STATE.get());
+            return true;
+        }
+        return false;
+    }
+    
     /** placeObsidianAt 保持原逻辑：放方块、加入 SacredObsidianData、命中检测、更新 NBT */
     private void placeObsidianAt(
             Level world,
@@ -670,67 +810,12 @@ public class SacredObsidianItem extends BaseItem {
         );
 
         if (target != null && damageEnabled) {
+
             /* ======= 伤害计算 ======= */
-
-            int powerLevel = getEnchantmentLevel(
-                    stack, world, Sacredobsidian.MODID + ":obsidian_power"
-            );
-            float damage = OBSIDIAN_DAMAGE + powerLevel * 5.0F;
-
-            DamageSource src = world.damageSources().playerAttack(player);
-            target.hurt(src, damage);
-
-            /* ======= 自定义效果 ======= */
-
-            ResourceKey<MobEffect> key = ResourceKey.create(
-                    Registries.MOB_EFFECT,
-                    ResourceLocation.parse("sacredobsidian:irreconcilable_crack")
-            );
-            Holder<MobEffect> effectHolder = world.registryAccess()
-                    .registryOrThrow(Registries.MOB_EFFECT)
-                    .getHolder(key)
-                    .orElseThrow();
-
-            target.addEffect(new MobEffectInstance(effectHolder, 100, 0));
-
-            /* ======= 击退处理 ======= */
-
-            int kbLevel = getEnchantmentLevel(stack, world, Sacredobsidian.MODID + ":obsidian_enhanced");
-            if (kbLevel > 0) {
-                float kbStrength = 0.5F * kbLevel;
-                double dx = player.getX() - target.getX();
-                double dz = player.getZ() - target.getZ();
-                target.knockback(kbStrength, dx, dz);
-            }
-
-            /* ======= 火焰附加（灵魂火表现） ======= */
-
-            int faLevel = getEnchantmentLevel(stack, world, Sacredobsidian.MODID + ":obsidian_enhanced");
-            if (faLevel > 0) {
-                int fireTicks = 4 * faLevel * 20;
-
-                target.setRemainingFireTicks(
-                        Math.max(target.getRemainingFireTicks(), fireTicks)
-                );
-
-                if (world instanceof ServerLevel server) {
-                    server.sendParticles(
-                            ParticleTypes.SOUL_FIRE_FLAME,
-                            target.getX(),
-                            target.getY() + target.getBbHeight() / 2.0,
-                            target.getZ(),
-                            10,
-                            0.3, 0.5, 0.3,
-                            0.01
-                    );
-                }
-                
-                playSoundAt(world, target.getX(), target.getY(), target.getZ(), SoundEvents.SOUL_ESCAPE, SoundSource.PLAYERS, 0.7F, 1.0F);
-            }
+            applyObsidianDamage(world, player, target, stack);
 
             // 命中后停止延伸
             // Stop extending after hitting an entity
-            world.playSound(null, pos, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.0F, 1.0F);
             stack.set(SacredObsidianDataComponents.IS_EXTENDING.get(), false);
             stack.remove(SacredObsidianDataComponents.REVERSE_MODE.get());
             return;
@@ -750,6 +835,297 @@ public class SacredObsidianItem extends BaseItem {
                 SacredObsidianDataComponents.EXTEND_BLOCKS.get(), 0
         );
         stack.set(SacredObsidianDataComponents.EXTEND_BLOCKS.get(), placed + 1);
+    }
+
+    private void applyObsidianDamage(
+            Level world,
+            Player attacker,
+            LivingEntity target,
+            ItemStack stack
+    ) {
+        if (!target.isAlive()) return;
+
+        int powerLevel = getEnchantmentLevel(
+                stack, world, Sacredobsidian.MODID + ":obsidian_power"
+        ); // 读取强力等级 // Read power level
+
+        int shredderLevel = getEnchantmentLevel(
+                stack, world, Sacredobsidian.MODID + ":armor_shredder"
+        );
+
+        float damagePerHit = OBSIDIAN_DAMAGE + powerLevel * 5.0F;
+
+        // =========================
+        // 基础伤害计算
+        // =========================
+        DamageSource normalSrc = world.damageSources().playerAttack(attacker);
+        target.hurt(normalSrc, damagePerHit);
+
+        // =========================
+        // 精细护甲损耗（方向判定）
+        // =========================
+        if (!world.isClientSide && target.getArmorValue() > 0) {
+
+            // 创造模式跳过护甲损耗
+            boolean skipArmorDamage = target instanceof Player p && p.getAbilities().instabuild;
+
+            if (!skipArmorDamage) {
+
+                EquipmentSlot hitSlot = getEquipmentSlot(attacker, target);
+                ItemStack hitArmor = target.getItemBySlot(hitSlot);
+
+                if (!hitArmor.isEmpty() && hitArmor.isDamageableItem()) {
+
+                    int L = shredderLevel;                     // ARMOR_SHREDDER 等级
+                    int armorValue = target.getArmorValue();
+                    float D = damagePerHit;                 // 本次黑曜石造成的伤害
+
+                    int maxDur = hitArmor.getMaxDamage();
+                    int currentDur = maxDur - hitArmor.getDamageValue();
+                    float R = (float) currentDur / (float) maxDur;
+
+                    // ===== PvP 平衡公式 =====
+                    float formula =
+                            (L * 0.03F * armorValue)
+                                    + (D * 0.6F)
+                                    + (0.25F * L)
+                                    + (R * 0.03F * L);
+
+                    // ===== 精确背刺判定（基于朝向）=====
+                    Vec3 attackDir = attacker.getLookAngle().normalize();
+                    Vec3 targetForward = target.getLookAngle().normalize();
+                    double dot = attackDir.dot(targetForward);
+
+                    boolean isBackstab = dot > 0.5;
+
+                    if (isBackstab) {
+                        formula *= 1.25F;
+                    }
+
+                    // ===== 精确爆头判定 =====
+                    double attackerEyeY = attacker.getEyeY();
+                    double headThreshold = target.getY() + target.getBbHeight() * 0.85;
+
+                    boolean isHeadshot = attackerEyeY > headThreshold;
+
+                    if (isHeadshot && hitSlot == EquipmentSlot.HEAD) {
+                        formula *= 1.2F;
+                    }
+
+                    int damageToArmor = getDamageToArmor(target, maxDur, Math.round(formula));
+
+                    int newDamage = hitArmor.getDamageValue() + damageToArmor;
+
+                    boolean willBreak = newDamage >= hitArmor.getMaxDamage();
+
+                    // ===== 实际损耗 =====
+                    hitArmor.hurtAndBreak(damageToArmor, target, hitSlot);
+
+                    // ===== 如果破损，手动发送实体事件 =====
+                    if (willBreak) {
+
+                        // 原版破损动画事件
+                        target.getCommandSenderWorld().broadcastEntityEvent(
+                                target,
+                                (byte) (47 + hitSlot.getIndex())
+                        );
+                        
+                        if (world instanceof ServerLevel server) {
+
+                            BlockState particleState =
+                                    getArmorParticleState(hitArmor);
+
+                            server.sendParticles(
+                                    new BlockParticleOption(
+                                            ParticleTypes.BLOCK,
+                                            particleState
+                                    ),
+                                    target.getX(),
+                                    target.getY() + target.getBbHeight() / 2.0,
+                                    target.getZ(),
+                                    25,
+                                    0.4,
+                                    0.4,
+                                    0.4,
+                                    0.1
+                            );
+
+                            world.playSound(
+                                    null,
+                                    target.blockPosition(),
+                                    SoundEvents.ITEM_BREAK,
+                                    SoundSource.PLAYERS,
+                                    1.0F,
+                                    1.0F
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // =========================
+        // 无视护甲伤害
+        // =========================
+        float bypassDamage = damagePerHit * (ARMOR_BYPASS_PERCENT + (0.1F * shredderLevel));
+
+        DamageSource magicSrc = new DamageSource(
+                world.registryAccess()
+                        .registryOrThrow(Registries.DAMAGE_TYPE)
+                        .getHolderOrThrow(DamageTypes.MAGIC),
+                attacker
+        );
+
+        target.hurt(magicSrc, bypassDamage);
+
+        // =========================
+        // 自定义效果
+        // =========================
+        ResourceKey<MobEffect> key = ResourceKey.create(
+                Registries.MOB_EFFECT,
+                ResourceLocation.parse("sacredobsidian:irreconcilable_crack")
+        );
+        Holder<MobEffect> effectHolder = world.registryAccess()
+                .registryOrThrow(Registries.MOB_EFFECT)
+                .getHolder(key)
+                .orElseThrow();
+
+        target.addEffect(new MobEffectInstance(effectHolder, 100, 0));
+
+        // =========================
+        // 击退
+        // =========================
+        int kbLevel = getEnchantmentLevel(stack, world, Sacredobsidian.MODID + ":obsidian_enhanced");
+        if (kbLevel > 0) {
+            float kbStrength = 0.5F * kbLevel;
+            double dx = attacker.getX() - target.getX();
+            double dz = attacker.getZ() - target.getZ();
+            target.knockback(kbStrength, dx, dz);
+        }
+
+        // =========================
+        // 火焰附加
+        // =========================
+        int faLevel = getEnchantmentLevel(stack, world, Sacredobsidian.MODID + ":obsidian_enhanced");
+        if (faLevel > 0) {
+            int fireTicks = 4 * faLevel * 20;
+
+            target.setRemainingFireTicks(
+                    Math.max(target.getRemainingFireTicks(), fireTicks)
+            );
+
+            if (world instanceof ServerLevel server) {
+                server.sendParticles(
+                        ParticleTypes.SOUL_FIRE_FLAME,
+                        target.getX(),
+                        target.getY() + target.getBbHeight() / 2.0,
+                        target.getZ(),
+                        10,
+                        0.3, 0.5, 0.3,
+                        0.01
+                );
+            }
+
+            playSoundAt(world, target.getX(), target.getY(), target.getZ(), SoundEvents.SOUL_ESCAPE, SoundSource.PLAYERS, 0.7F, 1.0F);
+        }
+
+        world.playSound(null, target.blockPosition(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 1.0F, 1.0F);
+
+        // =========================
+        // 破盾
+        // =========================
+        if (target instanceof Player targetPlayer) {
+            if (targetPlayer.isBlocking()) {
+
+                targetPlayer.getCooldowns().addCooldown(
+                        Items.SHIELD,
+                        120
+                );
+
+                targetPlayer.stopUsingItem();
+
+                world.playSound(
+                        null,
+                        targetPlayer.blockPosition(),
+                        SoundEvents.SHIELD_BREAK,
+                        SoundSource.PLAYERS,
+                        1.0F,
+                        1.0F
+                );
+            }
+        }
+
+        // ===== 命中音效 =====
+        world.playSound(
+                null,
+                target.blockPosition(),
+                SoundEvents.ANVIL_LAND,
+                SoundSource.PLAYERS,
+                1.0F,
+                1.0F
+        );
+    }
+    
+    private static int getDamageToArmor(LivingEntity target, int maxDur, int formula) {
+        int maxPerHit = (int) (maxDur * 0.08F); // 单次最多 8%
+
+        int damageToArmor = Math.max(1, formula);
+        damageToArmor = Math.min(damageToArmor, maxPerHit);
+
+        // ===== 防止同 tick 多段伤害过强 =====
+        if (target.invulnerableTime > 0) {
+            float reductionFactor = 0.7F;
+            damageToArmor = Math.max(
+                    1,
+                    Math.round(damageToArmor * reductionFactor)
+            );
+        }
+        return damageToArmor;
+    }
+
+    private static @NotNull EquipmentSlot getEquipmentSlot(Player attacker, LivingEntity target) {
+        double relativeY = attacker.getY() - target.getY();
+        double heightRatio = relativeY / target.getBbHeight();
+
+        EquipmentSlot hitSlot;
+
+        if (heightRatio > 0.8) {
+            hitSlot = EquipmentSlot.HEAD;
+        } else if (heightRatio > 0.5) {
+            hitSlot = EquipmentSlot.CHEST;
+        } else if (heightRatio > 0.2) {
+            hitSlot = EquipmentSlot.LEGS;
+        } else {
+            hitSlot = EquipmentSlot.FEET;
+        }
+        return hitSlot;
+    }
+
+    private BlockState getArmorParticleState(ItemStack stack) {
+
+        if (!(stack.getItem() instanceof ArmorItem armor)) {
+            return Blocks.STONE.defaultBlockState();
+        }
+
+        Holder<ArmorMaterial> material = armor.getMaterial();
+
+        if (material.is(ArmorMaterials.DIAMOND)) {
+            return Blocks.DIAMOND_BLOCK.defaultBlockState();
+        }
+        if (material.is(ArmorMaterials.NETHERITE)) {
+            return Blocks.NETHERITE_BLOCK.defaultBlockState();
+        }
+        if (material.is(ArmorMaterials.IRON)) {
+            return Blocks.IRON_BLOCK.defaultBlockState();
+        }
+        if (material.is(ArmorMaterials.GOLD)) {
+            return Blocks.GOLD_BLOCK.defaultBlockState();
+        }
+        if (material.is(ArmorMaterials.LEATHER)) {
+            return Blocks.BROWN_WOOL.defaultBlockState();
+        }
+
+        return Blocks.STONE.defaultBlockState();
     }
 
     public int getEnchantmentLevel(@NotNull ItemStack stack, Level level, @NotNull String enchantId) {

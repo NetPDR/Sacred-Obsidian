@@ -45,6 +45,26 @@ public class SacredObsidianDataComponents {
                             .persistent(Codec.BOOL)
                             .build());
 
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Boolean>> VANILLA_INTERACTING =
+            DATA_COMPONENTS.register("vanilla_interacting",
+                    () -> DataComponentType.<Boolean>builder()
+                            .persistent(Codec.BOOL)
+                            .build()
+            );
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Boolean>> FRACTIONAL_LIFTED =
+            DATA_COMPONENTS.register("fractional_lifted",
+                    () -> DataComponentType.<Boolean>builder()
+                            .persistent(Codec.BOOL)
+                            .build()
+            );
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> SUB_STATE =
+            DATA_COMPONENTS.register("sub_state",
+                    () -> DataComponentType.<Integer>builder()
+                            .persistent(Codec.INT)
+                            .build());
+
     /* =========================
      *   延伸进度相关
      * ========================= */

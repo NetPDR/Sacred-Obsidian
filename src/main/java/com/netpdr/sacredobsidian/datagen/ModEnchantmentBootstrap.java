@@ -74,6 +74,31 @@ public final class ModEnchantmentBootstrap {
                         net.minecraft.core.component.DataComponentMap.EMPTY
                 )
         );
+
+        /* ================= Armor Shredder ================= */
+
+        Enchantment.EnchantmentDefinition armorShredderDef =
+                Enchantment.definition(
+                        sacredObsidian,                       // supported items
+                        8,                                    // weight
+                        3,                                    // max level
+                        Enchantment.dynamicCost(10, 10),       // min cost
+                        Enchantment.dynamicCost(30, 10),      // max cost
+                        1,                                    // anvil cost
+                        EquipmentSlotGroup.MAINHAND
+                );
+
+        ctx.register(
+                ModEnchantments.ARMOR_SHREDDER,
+                new Enchantment(
+                        Component.translatable(
+                                "enchantment." + Sacredobsidian.MODID + ".armor_shredder"
+                        ),
+                        armorShredderDef,
+                        HolderSet.direct(),
+                        net.minecraft.core.component.DataComponentMap.EMPTY
+                )
+        );
     }
 
     private ModEnchantmentBootstrap() {}

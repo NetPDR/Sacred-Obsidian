@@ -25,12 +25,14 @@ public final class ModEnchantmentTagProvider extends EnchantmentTagsProvider {
         tag(EnchantmentTags.IN_ENCHANTING_TABLE)
                 .addOptional(ResourceLocation.fromNamespaceAndPath(Sacredobsidian.MODID, "obsidian_power"))
                 .addOptional(ResourceLocation.fromNamespaceAndPath(Sacredobsidian.MODID, "obsidian_reach"))
-                .addOptional(ResourceLocation.fromNamespaceAndPath(Sacredobsidian.MODID, "obsidian_enhanced"));
+                .addOptional(ResourceLocation.fromNamespaceAndPath(Sacredobsidian.MODID, "obsidian_enhanced"))
+                .addOptional(ResourceLocation.fromNamespaceAndPath(Sacredobsidian.MODID, "armor_shredder"));
 
         tag(EnchantmentTags.NON_TREASURE)
                 .addOptional(ResourceLocation.fromNamespaceAndPath(Sacredobsidian.MODID, "obsidian_power"))
                 .addOptional(ResourceLocation.fromNamespaceAndPath(Sacredobsidian.MODID, "obsidian_reach"))
-                .addOptional(ResourceLocation.fromNamespaceAndPath(Sacredobsidian.MODID, "obsidian_enhanced"));
+                .addOptional(ResourceLocation.fromNamespaceAndPath(Sacredobsidian.MODID, "obsidian_enhanced"))
+                .addOptional(ResourceLocation.fromNamespaceAndPath(Sacredobsidian.MODID, "armor_shredder"));
     }    @Override
     public @NotNull String getName() {
         return "Sacred Obsidian Enchantment Tags";

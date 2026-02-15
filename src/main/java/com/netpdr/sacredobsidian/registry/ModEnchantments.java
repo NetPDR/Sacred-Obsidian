@@ -24,6 +24,9 @@ public final class ModEnchantments {
     public static final ResourceKey<Enchantment> OBSIDIAN_ENHANCED =
             ResourceKey.create(Registries.ENCHANTMENT, ResourceLocation.fromNamespaceAndPath(MODID, "obsidian_enhanced"));
 
+    public static final ResourceKey<Enchantment> ARMOR_SHREDDER=
+            ResourceKey.create(Registries.ENCHANTMENT, ResourceLocation.fromNamespaceAndPath(MODID, "armor_shredder"));
+
     private ModEnchantments() { /* util class */ }
 
     public static Optional<Holder.Reference<Enchantment>> getHolder(Level level, ResourceKey<Enchantment> key) {

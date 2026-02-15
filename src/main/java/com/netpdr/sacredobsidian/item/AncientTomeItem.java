@@ -24,7 +24,7 @@ public class AncientTomeItem extends Item {
             ResourceKey<Enchantment> enchantmentKey,
             Properties properties
     ) {
-        super(properties);
+        super(properties.stacksTo(1));
         this.targetEnchantment = enchantmentKey;
     }
 
