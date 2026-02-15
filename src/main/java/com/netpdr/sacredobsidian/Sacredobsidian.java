@@ -1,7 +1,8 @@
 package com.netpdr.sacredobsidian;
 
-import com.netpdr.sacredobsidian.client.reverse.ReverseKeyHandler;
+import com.netpdr.sacredobsidian.client.key.reverse.ReverseKeyHandler;
 import com.netpdr.sacredobsidian.client.entity.ClientSpawnObsidianEffectPacket;
+import com.netpdr.sacredobsidian.network.VanillaInteractPacket;
 import com.netpdr.sacredobsidian.network.ReverseModePacket;
 import com.netpdr.sacredobsidian.network.ToggleDamagePacket;
 import com.netpdr.sacredobsidian.registry.*;
@@ -81,6 +82,11 @@ public class Sacredobsidian {
                 ToggleDamagePacket::encode,
                 ToggleDamagePacket::decode,
                 ToggleDamagePacket::handle);
+
+        CHANNEL.registerMessage(id++, VanillaInteractPacket.class,
+                VanillaInteractPacket::encode,
+                VanillaInteractPacket::decode,
+                VanillaInteractPacket::handle);
     }
 
     public Sacredobsidian() {

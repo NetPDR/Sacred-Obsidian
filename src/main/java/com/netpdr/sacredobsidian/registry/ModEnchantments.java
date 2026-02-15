@@ -1,6 +1,7 @@
 package com.netpdr.sacredobsidian.registry;
 
 import com.netpdr.sacredobsidian.Sacredobsidian;
+import com.netpdr.sacredobsidian.enchantment.ArmorShredderEnchantment;
 import com.netpdr.sacredobsidian.enchantment.ObsidianPowerEnchantment;
 import com.netpdr.sacredobsidian.enchantment.ObsidianReachEnchantment;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -27,6 +28,15 @@ public class ModEnchantments {
     public static final RegistryObject<Enchantment> OBSIDIAN_REACH =
             ENCHANTMENTS.register("obsidian_reach",
                     () -> new ObsidianReachEnchantment(
+                            Enchantment.Rarity.UNCOMMON,
+                            EnchantmentCategory.BREAKABLE,
+                            EquipmentSlot.MAINHAND
+                    )
+            );
+
+    public static final RegistryObject<Enchantment> ARMOR_SHREDDER =
+            ENCHANTMENTS.register("armor_shredder",
+                    () -> new ArmorShredderEnchantment(
                             Enchantment.Rarity.UNCOMMON,
                             EnchantmentCategory.BREAKABLE,
                             EquipmentSlot.MAINHAND

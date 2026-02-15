@@ -1,10 +1,14 @@
 package com.netpdr.sacredobsidian.client.render;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.netpdr.sacredobsidian.weapon.SacredObsidianItem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
@@ -16,9 +20,12 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber(modid = "sacredobsidian", value = Dist.CLIENT)
-public class CooldownItemOverlay {
+public final class CooldownItemOverlay {
 
-    // 在游戏 HUD 上渲染（热键栏、副手） // Rendering on the game HUD (hotbar bar, off-hand)
+    private static final ResourceLocation COOLDOWN =
+            new ResourceLocation("sacredobsidian", "textures/gui/cooldown.png");
+
+    /* ---------------- HUD（热键栏 + 副手） ---------------- */
     @SubscribeEvent
     public static void onRenderGui(RenderGuiOverlayEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
@@ -28,28 +35,23 @@ public class CooldownItemOverlay {
         GuiGraphics gg = event.getGuiGraphics();
         int screenW = mc.getWindow().getGuiScaledWidth();
         int screenH = mc.getWindow().getGuiScaledHeight();
+        long now = player.level().getGameTime();
 
-        // 热键栏 9 个槽位 // Hotkey bar 9 slots
         for (int slot = 0; slot < 9; slot++) {
             int x = screenW / 2 - 90 + slot * 20 + 2;
             int y = screenH - 16 - 3;
-            renderCooldownForSlot(gg, player, slot, x, y);
+            renderCooldown(gg, player.getInventory().getItem(slot), x, y, now);
         }
 
-        // 副手槽（原版在热键栏左侧或右侧，取决于主手设置） // Off-hand slot (original on the left or right side of the hotbar depending on the main hand setting)
-        int offhandX;
         int offhandY = screenH - 16 - 3;
-        if (player.getMainArm() == HumanoidArm.RIGHT) {
-            // 副手在左侧 // The deputy is on the left
-            offhandX = screenW / 2 - 91 - 26;
-        } else {
-            // 副手在右侧 // The deputy is on the right side
-            offhandX = screenW / 2 + 91 + 10;
-        }
-        renderCooldownForSlot(gg, player, 40, offhandX, offhandY);
+        int offhandX = (player.getMainArm() == HumanoidArm.RIGHT)
+                ? screenW / 2 - 91 - 26
+                : screenW / 2 + 91 + 10;
+
+        renderCooldown(gg, player.getInventory().getItem(40), offhandX, offhandY, now);
     }
 
-    // 在容器界面里渲染（自动兼容扩容背包） // Render in the container interface (automatically compatible with the expansion backpack)
+    /* ---------------- 容器界面（尽量使用同一套渲染） ---------------- */
     @SubscribeEvent
     public static void onScreenRender(ScreenEvent.Render.Post event) {
         if (!(event.getScreen() instanceof AbstractContainerScreen<?> screen)) return;
@@ -58,43 +60,70 @@ public class CooldownItemOverlay {
         if (player == null) return;
 
         GuiGraphics gg = event.getGuiGraphics();
+        long now = player.level().getGameTime();
 
         for (Slot slot : screen.getMenu().slots) {
             if (!slot.hasItem()) continue;
             ItemStack stack = slot.getItem();
-            if (!(stack.getItem() instanceof SacredObsidianItem)) continue;
-
             int x = screen.getGuiLeft() + slot.x;
             int y = screen.getGuiTop() + slot.y;
-            renderCooldownForStack(gg, player, stack, x, y);
+            renderCooldown(gg, stack, x, y, now);
         }
     }
 
-    private static void renderCooldownForSlot(GuiGraphics gg, Player player, int slot, int x, int y) {
-        ItemStack stack = player.getInventory().getItem(slot);
-        renderCooldownForStack(gg, player, stack, x, y);
-    }
-
-    private static void renderCooldownForStack(GuiGraphics gg, Player player, ItemStack stack, int x, int y) {
+    /* ---------------- 核心渲染逻辑（HUD + 容器均用） ---------------- */
+    private static void renderCooldown(
+            GuiGraphics gg,
+            ItemStack stack,
+            int x,
+            int y,
+            long now
+    ) {
+        if (stack == null || stack.isEmpty()) return;
         if (!(stack.getItem() instanceof SacredObsidianItem)) return;
 
-        CompoundTag tag = stack.getOrCreateTag();
-        long lastUse = tag.getLong("LastUseTime");
-        long current = player.level().getGameTime();
+        CompoundTag tag = stack.getTag();
+        if (tag == null || !tag.contains("LastUseTime")) return;
 
-        int cooldownTicks = SacredObsidianItem.COOLDOWN_TIME;
-        long passed = current - lastUse;
+        long start = tag.getLong("LastUseTime");
+        int cooldown = tag.contains("Cooldown")
+                ? tag.getInt("Cooldown")
+                : SacredObsidianItem.COOLDOWN_TIME;
 
-        if (passed < cooldownTicks) {
-            float progress = 1.0F - (passed / (float) cooldownTicks);
-            renderCooldownOverlay(gg, x, y, progress);
-        }
-    }
+        long end = start + cooldown;
+        if (now >= end) return;
 
-    private static void renderCooldownOverlay(GuiGraphics gg, int x, int y, float progress) {
+        float progress = Mth.clamp((end - now) / (float) cooldown, 0.0F, 1.0F);
         int height = (int) (16 * progress);
-        // 黑色 + 半透明 (0x64 alpha = ~40% 透明度)  // Black + Translucent (0x64 alpha = ~40% transparency)
-        int color = 0x64000000;
-        gg.fill(x, y + (16 - height), x + 16, y + 16, color);
+
+        // Push pose, move to foreground, bind GUI shader and texture, ensure blending
+        gg.pose().pushPose();
+        gg.pose().translate(0.0F, 0.0F, 200.0F);
+
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.setShader(GameRenderer::getPositionTexShader);
+        RenderSystem.setShaderTexture(0, COOLDOWN);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+
+        // Disable depth test to ensure overlay sits on top of item models
+        RenderSystem.disableDepthTest();
+
+        gg.blit(
+                COOLDOWN,
+                x,
+                y + (16 - height),
+                0,
+                16 - height,
+                16,
+                height,
+                16,
+                16
+        );
+
+        // Restore depth and blend and pose
+        RenderSystem.enableDepthTest();
+        RenderSystem.disableBlend();
+        gg.pose().popPose();
     }
 }
